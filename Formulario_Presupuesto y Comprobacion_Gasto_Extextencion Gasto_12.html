@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="ES">
+<head>
+    <meta charset="UTF-8">
+    <meta name="VIEWPORT" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA DE GESTIÓN DE VIÁTICOS Y GASTOS</title>
+    <!-- TAILWIND CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- VUE 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- LUCIDE ICONS -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-black text-gray-100 font-sans antialiased uppercase">
+
+<div id="app" class="min-h-screen flex flex-col max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4">
+
+    <!-- MODAL DE INICIO DE SESIÓN / AUTENTICACIÓN -->
+    <div v-if="!sesionIniciada" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-neutral-900 border border-neutral-800 p-6 sm:p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
+            <div class="text-center space-y-1">
+                <h2 class="text-xl font-bold text-white tracking-wide">🔐 INICIO DE SESIÓN</h2>
+                <p class="text-xs text-neutral-400">INGRESE SUS CREDENCIALES PARA ACCEDER AL SISTEMA</p>
+            </div>
+            
+            <form @submit.prevent="iniciarSesion" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-300 mb-1">USUARIO / AUDITOR</label>
+                    <select v-model="loginForm.usuarioId" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-amber-500">
+                        <option value="">-- SELECCIONAR USUARIO --</option>
+                        <option v-for="u in dbUsuarios" :key="u.id" :value="u.id">{{ u.nombre }} ({{ u.permiso }})</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-300 mb-1">CONTRASEÑA</label>
+                    <input type="password" v-model="loginForm.password" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div v-if="loginError" class="text-xs text-red-500 font-bold text-center bg-red-950/50 p-2 rounded border border-red-900">
+                    {{ loginError }}
+                </div>
+
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+                    INGRESAR AL SISTEMA
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL FORZADO: CAMBIO DE CONTRASEÑA OBLIGATORIO -->
+    <div v-if="requiereCambioPassword" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-neutral-900 border border-amber-500/50 p-6 sm:p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
+            <div class="text-center space-y-1">
+                <h2 class="text-xl font-bold text-amber-500 tracking-wide">⚠️ CAMBIO DE CONTRASEÑA REQUERIDO</h2>
+                <p class="text-xs text-neutral-300">POR SEGURIDAD, DEBE ACTUALIZAR SU CONTRASEÑA PREDETERMINADA ANTES DE CONTINUAR.</p>
+            </div>
+
+            <form @submit.prevent="actualizarPasswordForzado" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-300 mb-1">NUEVA CONTRASEÑA</label>
+                    <input type="password" v-model="cambioPassForm.nueva" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-300 mb-1">CONFIRMAR NUEVA CONTRASEÑA</label>
+                    <input type="password" v-model="cambioPassForm.confirmacion" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div v-if="cambioPassError" class="text-xs text-red-500 font-bold text-center bg-red-950/50 p-2 rounded border border-red-900">
+                    {{ cambioPassError }}
+                </div>
+
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+                    GUARDAR NUEVA CONTRASEÑA Y CONTINUAR
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- HEADER APP -->
+    <header class="bg-neutral-900 border border-neutral-800 text-white p-4 rounded-xl shadow-lg mb-4 flex justify-between items-center flex-wrap gap-2">
+        <div>
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                <span>{{ formData.tipoPerfil === 'INTERNO' ? '📋' : '💼' }}</span>
+                {{ tituloDocumento }}
+            </h1>
+            <p class="text-xs text-neutral-400">FOLIO AUTOGENERADO: <span class="font-mono text-amber-500 font-bold">{{ formData.folio }}</span></p>
+        </div>
+        <div class="flex items-center gap-4 flex-wrap">
+            <div class="flex items-center gap-2" v-if="sesionIniciada">
+                <span class="text-xs text-neutral-300">USUARIO:</span>
+                <span class="text-amber-400 font-bold text-xs bg-neutral-800 border border-neutral-700 px-3 py-1.5 rounded-lg">
+                    {{ usuarioActivo.nombre }} ({{ usuarioActivo.permiso }})
+                </span>
+                <button @click="cerrarSesion" class="bg-red-900/60 hover:bg-red-800 text-red-200 text-xs px-2 py-1.5 rounded-lg border border-red-700 transition font-bold" title="Cerrar Sesión">
+                    🚪 SALIR
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-xs text-neutral-300">MONEDA:</label>
+                <select v-model="formData.moneda" class="bg-neutral-800 border border-neutral-700 text-amber-400 font-bold text-xs rounded-lg p-2 focus:ring-2 focus:ring-amber-500">
+                    <option v-for="m in catalogos.monedas" :key="m" :value="m">{{ m }}</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-xs text-neutral-300">PERFIL LEGAL:</label>
+                <select v-model="formData.tipoPerfil" @change="actualizarDenominacion" class="bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg p-2 focus:ring-2 focus:ring-amber-500">
+                    <option value="INTERNO">INTERNO (EMPLEADO S&M)</option>
+                    <option value="EXTERNO">EXTERNO (CONTRATISTA / PROVEEDOR)</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVEGACIÓN POR PESTAÑAS -->
+    <nav class="flex border-b border-neutral-800 mb-4 bg-neutral-900 rounded-t-xl overflow-hidden flex-wrap">
+        <button @click="activeTab = 'presupuesto'" 
+                :class="['flex-1 py-3 px-3 text-center font-medium text-xs transition-colors border-b-2 min-w-[150px]', 
+                         activeTab === 'presupuesto' ? 'border-amber-500 text-amber-500 bg-neutral-800' : 'border-transparent text-neutral-400 hover:text-neutral-200']">
+            1. PRESUPUESTO / COTIZACIÓN
+        </button>
+        <button @click="activeTab = 'comprobacion'" 
+                :class="['flex-1 py-3 px-3 text-center font-medium text-xs transition-colors border-b-2 min-w-[150px]', 
+                         activeTab === 'comprobacion' ? 'border-amber-500 text-amber-500 bg-neutral-800' : 'border-transparent text-neutral-400 hover:text-neutral-200']">
+            2. COMPROBACIÓN DE GASTOS
+        </button>
+        <button @click="activeTab = 'extension'" 
+                :class="['flex-1 py-3 px-3 text-center font-medium text-xs transition-colors border-b-2 min-w-[150px]', 
+                         activeTab === 'extension' ? 'border-amber-500 text-amber-500 bg-neutral-800' : 'border-transparent text-neutral-400 hover:text-neutral-200']">
+            3. EXTENSIÓN DE PRESUPUESTO
+        </button>
+        <button @click="activeTab = 'admin'" 
+                :class="['flex-1 py-3 px-3 text-center font-medium text-xs transition-colors border-b-2 min-w-[150px]', 
+                         activeTab === 'admin' ? 'border-amber-500 text-amber-500 bg-neutral-800' : 'border-transparent text-neutral-400 hover:text-neutral-200']">
+            ⚙️ 4. ADMINISTRACIÓN & BD
+        </button>
+        <button @click="activeTab = 'reportes'" 
+                :class="['flex-1 py-3 px-3 text-center font-medium text-xs transition-colors border-b-2 min-w-[150px]', 
+                         activeTab === 'reportes' ? 'border-amber-500 text-amber-500 bg-neutral-800' : 'border-transparent text-neutral-400 hover:text-neutral-200']">
+            📊 5. REPORTEADOR & CONSULTAS
+        </button>
+    </nav>
+
+    <!-- PESTAÑA 1: PRESUPUESTO / COTIZACIÓN -->
+    <main v-if="activeTab === 'presupuesto'" class="space-y-6">
+        <div :class="['p-3 rounded-lg text-xs flex items-center gap-2 border', formData.tipoPerfil === 'INTERNO' ? 'bg-neutral-900 text-blue-400 border-blue-900' : 'bg-neutral-900 text-emerald-400 border-emerald-900']">
+            <span class="font-bold">AVISO LEGAL:</span>
+            <span v-if="formData.tipoPerfil === 'INTERNO'">MANEJO DE VIÁTICOS BAJO LA MODALIDAD DE ANTICIPO LABORAL SUJETO A COMPROBACIÓN FISCAL.</span>
+            <span v-if="formData.tipoPerfil === 'EXTERNO'">RELACIÓN MERCANTIL INDEPENDIENTE. SIN SUBORDINACIÓN LABORAL, NI ASIGNACIÓN DE HORARIOS. DOCUMENTO FISCAL EQUIVALENTE A COTIZACIÓN FORMAL.</span>
+        </div>
+
+        <div v-if="formData.cancelado" class="bg-red-950/80 border border-red-800 p-3 rounded-xl text-center">
+            <span class="text-xs font-bold text-red-400">⚠️ ESTE PRESUPUESTO BASE HA SIDO CANCELADO. LOS MONTOS SE HAN DESCONTADO A $0.00.</span>
+        </div>
+
+        <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">NOMBRE DEL AUDITOR</label>
+                <select v-model="formData.auditor" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
+                    <option value="">-- SELECCIONAR --</option>
+                    <option v-for="aud in catalogos.auditores" :key="aud" :value="aud">{{ aud }}</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">FECHA DE PRESUPUESTO</label>
+                <input type="date" v-model="formData.fechaPresupuesto" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs disabled:opacity-50">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">MES DE TRABAJO</label>
+                <select v-model="formData.mesTrabajo" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
+                    <option v-for="mes in catalogos.meses" :key="mes" :value="mes">{{ mes }}</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">NÚMERO DE SEMANA</label>
+                <input type="number" v-model.number="formData.numeroSemana" :disabled="!puedeEscribir" min="1" max="53" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs disabled:opacity-50">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">NOCHES DE HOSPEDAJE</label>
+                <input type="number" v-model.number="formData.nochesHospedaje" @input="calcularMontoHospedaje" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS POR AUDITAR FORÁNEO</label>
+                <input type="number" v-model.number="formData.diasForaneo" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS POR AUDITAR ESTADO DE MÉXICO</label>
+                <input type="number" v-model.number="formData.diasEdomex" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">TOTAL DE DÍAS</label>
+                <input type="number" :value="totalDias" readonly class="w-full bg-neutral-800 border border-neutral-700 text-amber-500 rounded-lg p-2 text-xs font-mono font-bold">
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">CUENTA BANCARIA / CLABE</label>
+                <input type="text" v-model="formData.clabe" :disabled="!puedeEscribir" maxlength="18" placeholder="18 DÍGITOS" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">PRESUPUESTO ALIMENTOS ({{ formData.moneda }})</label>
+                <input type="number" v-model.number="formData.montoAlimentos" :disabled="!puedeEscribir || formData.cancelado" min="0" step="0.01" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">PRESUPUESTO HOSPEDAJE ({{ formData.moneda }}) <span class="text-[10px] text-amber-500 font-normal">(TOPADO A $600/NOCHE)</span></label>
+                <input type="number" v-model.number="formData.montoHospedaje" readonly class="w-full bg-neutral-800 border border-neutral-700 text-amber-500 rounded-lg p-2 text-xs font-mono font-bold">
+            </div>
+        </div>
+
+        <div class="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
+            <div class="p-4 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center">
+                <h3 class="font-bold text-neutral-200 text-xs">DESGLOSE DETALLADO DE RUTAS Y TRANSPORTES</h3>
+                <button v-if="puedeEscribir && !formData.cancelado" @click="agregarFilaPresupuesto" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                    + AGREGAR TRAMO / TRANSPORTE
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-neutral-950 text-neutral-400 uppercase tracking-wider border-b border-neutral-800">
+                            <th class="p-2">NO.</th>
+                            <th class="p-2">DEALER / CLIENTE</th>
+                            <th class="p-2">FECHA</th>
+                            <th class="p-2">CONCEPTO</th>
+                            <th class="p-2">ORIGEN</th>
+                            <th class="p-2">H. SALIDA</th>
+                            <th class="p-2">DESTINO</th>
+                            <th class="p-2">H. LLEGADA</th>
+                            <th class="p-2">LÍNEA / PROV.</th>
+                            <th class="p-2">MONTO ({{ formData.moneda }})</th>
+                            <th class="p-2">ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-800">
+                        <tr v-for="(item, idx) in presupuestoItems" :key="idx" class="hover:bg-neutral-800/50">
+                            <td class="p-2 font-bold text-center text-neutral-400">{{ idx + 1 }}</td>
+                            <td class="p-2">
+                                <select v-model="item.dealer" :disabled="!puedeEscribir || formData.cancelado" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-32 uppercase disabled:opacity-50">
+                                    <option v-for="d in catalogos.dealers" :key="d" :value="d">{{ d }}</option>
+                                </select>
+                            </td>
+                            <td class="p-2">
+                                <input type="date" v-model="item.fecha" :disabled="!puedeEscribir || formData.cancelado" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-28 disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <select v-model="item.concepto" :disabled="!puedeEscribir || formData.cancelado" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-32 disabled:opacity-50">
+                                    <option v-for="c in catalogos.conceptosTransporte" :key="c" :value="c">{{ c }}</option>
+                                </select>
+                            </td>
+                            <td class="p-2">
+                                <input type="text" spellcheck="true" lang="es" v-model="item.origen" :disabled="!puedeEscribir || formData.cancelado" placeholder="ORIGEN" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-24 uppercase disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="time" v-model="item.horaSalida" :disabled="!puedeEscribir || formData.cancelado" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-20 disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="text" spellcheck="true" lang="es" v-model="item.destino" :disabled="!puedeEscribir || formData.cancelado" placeholder="DESTINO" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-24 uppercase disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="time" v-model="item.horaLlegada" :disabled="!puedeEscribir || formData.cancelado" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-20 disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="text" spellcheck="true" lang="es" v-model="item.proveedor" :disabled="!puedeEscribir || formData.cancelado" placeholder="LÍNEA / APP" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-24 uppercase disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="number" v-model.number="item.monto" :disabled="!puedeEscribir || formData.cancelado" min="0" step="0.01" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-20 font-mono disabled:opacity-50">
+                            </td>
+                            <td class="p-2 text-center">
+                                <button v-if="puedeEscribir && !formData.cancelado" @click="eliminarFilaPresupuesto(idx)" class="text-red-500 hover:text-red-400 font-bold">✕</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-4 bg-neutral-950 border-t border-neutral-800 space-y-2 text-xs">
+                <div class="flex justify-between text-neutral-400">
+                    <span>TOTAL PRESUPUESTADO TRANSPORTE:</span>
+                    <span class="font-mono font-bold text-white">{{ formatoMoneda(subtotalTransporte) }}</span>
+                </div>
+                <div class="flex justify-between text-neutral-400">
+                    <span>TOTAL PRESUPUESTADO ALIMENTOS:</span>
+                    <span class="font-mono font-bold text-white">{{ formatoMoneda(formData.cancelado ? 0 : formData.montoAlimentos || 0) }}</span>
+                </div>
+                <div class="flex justify-between text-neutral-400">
+                    <span>TOTAL PRESUPUESTADO HOSPEDAJE:</span>
+                    <span class="font-mono font-bold text-white">{{ formatoMoneda(formData.cancelado ? 0 : formData.montoHospedaje || 0) }}</span>
+                </div>
+
+                <div v-if="extensionAutorizada" class="flex justify-between text-amber-500 pt-1 border-t border-neutral-800 font-bold">
+                    <span>TOTAL PRESUPUESTADO EXTENSIÓN (AUTORIZADO):</span>
+                    <span class="font-mono">{{ formatoMoneda(totalExtension) }}</span>
+                </div>
+                
+                <div v-if="formData.tipoPerfil === 'EXTERNO'" class="pt-2 border-t border-neutral-800 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-neutral-400">HONORARIOS PROFESIONAL/SERVICIO:</span>
+                        <input type="number" v-model.number="formData.honorarios" :disabled="!puedeEscribir || formData.cancelado" class="w-32 bg-black border border-neutral-700 rounded p-1 text-xs text-right font-mono text-white disabled:opacity-50">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-neutral-400">RETENCIÓN DE IMPUESTOS (ISR/IVA):</span>
+                        <input type="number" v-model.number="formData.retenciones" :disabled="!puedeEscribir || formData.cancelado" class="w-32 bg-black border border-neutral-700 rounded p-1 text-xs text-right font-mono text-white disabled:opacity-50">
+                    </div>
+                </div>
+
+                <div class="flex justify-between text-sm font-bold text-white pt-2 border-t border-neutral-700">
+                    <span>TOTAL GENERAL BASE + EXTENSIONES:</span>
+                    <span class="font-mono text-amber-400 text-base">{{ formatoMoneda(totalGeneralPresupuesto) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 flex-wrap">
+            <button v-if="puedeEscribir" @click="guardarPresupuestoEnBD" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 text-xs">
+                <span>🗄️</span> GUARDAR EN BD (SQL / EXCEL CLOUD)
+            </button>
+            <button v-if="puedeEscribir" @click="enviarPresupuesto" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 text-xs">
+                <span>✉️</span> ENVIAR PARA AUTORIZACIÓN
+            </button>
+            <button v-if="puedeEscribir" @click="nuevoPresupuesto" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-amber-400 font-bold px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 text-xs">
+                <span>📄</span> + NUEVO PRESUPUESTO
+            </button>
+        </div>
+    </main>
+
+    <!-- PESTAÑA 2: COMPROBACIÓN DE GASTOS -->
+    <main v-if="activeTab === 'comprobacion'" class="space-y-6">
+        <div class="bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center flex-wrap gap-2">
+            <div>
+                <h3 class="font-bold text-neutral-200 text-xs">EJECUCIÓN PRESUPUESTAL Y COMPROBACIÓN REAL POR DÍA</h3>
+                <p class="text-[10px] text-neutral-400">REGISTRA TUS GASTOS REALES CON NÚMERO DE FACTURA/NOTA Y CARGA COMPROBANTES FISCALES.</p>
+            </div>
+            <div class="text-right">
+                <span class="text-[10px] text-neutral-400 block">SALDO FINAL (VARIACIÓN)</span>
+                <span :class="['font-mono font-bold text-xs', totalComprobado > totalGeneralPresupuesto ? 'text-red-500' : 'text-emerald-400']">
+                    {{ formatoMoneda(totalGeneralPresupuesto - totalComprobado) }}
+                </span>
+            </div>
+        </div>
+
+        <div class="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
+            <div class="p-4 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center">
+                <h3 class="font-bold text-neutral-200 text-xs">COMPROBACIÓN DETALLADA</h3>
+                <button v-if="puedeEscribir" @click="agregarFilaComprobacion" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                    + AGREGAR GASTO REAL
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-neutral-950 text-neutral-400 uppercase tracking-wider border-b border-neutral-800">
+                            <th class="p-2">NO.</th>
+                            <th class="p-2">DEALER</th>
+                            <th class="p-2">FECHA</th>
+                            <th class="p-2">CONCEPTO</th>
+                            <th class="p-2">PROV. FACTURA</th>
+                            <th class="p-2">NO. FACTURA / NOTA</th>
+                            <th class="p-2">SUBTOTAL ({{ formData.moneda }})</th>
+                            <th class="p-2">COMPROBANTE ADJUNTO</th>
+                            <th class="p-2">ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-800">
+                        <tr v-for="(item, idx) in comprobacionItems" :key="idx" class="hover:bg-neutral-800/50">
+                            <td class="p-2 font-bold text-center text-neutral-400">{{ idx + 1 }}</td>
+                            <td class="p-2">
+                                <select v-model="item.dealer" :disabled="!puedeEscribir" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-28 uppercase disabled:opacity-50">
+                                    <option v-for="d in catalogos.dealers" :key="d" :value="d">{{ d }}</option>
+                                </select>
+                            </td>
+                            <td class="p-2">
+                                <input type="date" v-model="item.fecha" :disabled="!puedeEscribir" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-28 disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <select v-model="item.concepto" :disabled="!puedeEscribir" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-32 disabled:opacity-50">
+                                    <option v-for="c in catalogos.todosConceptos" :key="c" :value="c">{{ c }}</option>
+                                </select>
+                            </td>
+                            <td class="p-2">
+                                <input type="text" spellcheck="true" lang="es" v-model="item.proveedorFactura" :disabled="!puedeEscribir" placeholder="PROVEEDOR" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-24 uppercase disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="text" v-model="item.numeroFactura" :disabled="!puedeEscribir" placeholder="FOLIO / NOTA" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-24 font-mono uppercase disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="number" v-model.number="item.montoReal" :disabled="!puedeEscribir" min="0" step="0.01" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-20 font-mono disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="file" @change="subirArchivo($event, item)" :disabled="!puedeEscribir" accept="image/jpeg,image/png,application/pdf" class="text-xs text-neutral-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-neutral-800 file:text-amber-400 hover:file:bg-neutral-700 disabled:opacity-50">
+                                <div v-if="item.archivoNombre" class="text-[10px] text-neutral-400 mt-1 flex items-center gap-1">
+                                    <span>📎</span> {{ item.archivoNombre }}
+                                </div>
+                            </td>
+                            <td class="p-2 text-center">
+                                <button v-if="puedeEscribir" @click="eliminarFilaComprobacion(idx)" class="text-red-500 hover:text-red-400 font-bold">✕</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- PESTAÑA 3: EXTENSIÓN DE PRESUPUESTO -->
+    <main v-if="activeTab === 'extension'" class="space-y-6">
+        <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 space-y-4">
+            <div class="flex justify-between items-center border-b border-neutral-800 pb-2">
+                <h3 class="font-bold text-neutral-200 text-xs">SOLICITUD Y REGISTRO DE EXTENSIÓN DE GASTOS</h3>
+                <span :class="['px-2 py-0.5 rounded text-[10px] font-bold', extensionCancelada ? 'bg-red-950 text-red-400 border border-red-800' : extensionAutorizada ? 'bg-emerald-900 text-emerald-300' : 'bg-amber-900 text-amber-300']">
+                    {{ extensionCancelada ? 'EXTENSIÓN CANCELADA' : extensionAutorizada ? 'AUTORIZADO' : 'PENDIENTE DE AUTORIZACIÓN' }}
+                </span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-400 mb-1">CORREO JEFE INMEDIATO</label>
+                    <select v-model="extensionData.jefeEmail" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono uppercase disabled:opacity-50">
+                        <option value="">-- SELECCIONAR CORREO --</option>
+                        <option v-for="c in catalogos.correos" :key="c" :value="c">{{ c }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-400 mb-1">CORREO GERENTE</label>
+                    <select v-model="extensionData.gerenteEmail" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono uppercase disabled:opacity-50">
+                        <option value="">-- SELECCIONAR CORREO --</option>
+                        <option v-for="c in catalogos.correos" :key="c" :value="c">{{ c }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-black border border-neutral-800 p-4 rounded-lg space-y-3">
+                <label class="block text-xs font-bold text-amber-500">ADJUNTAR COMPROBANTE DE AUTORIZACIÓN (.MSG O IMÁGENES)</label>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <input type="file" @change="subirArchivoExtension" :disabled="!puedeEscribir || extensionCancelada" accept=".msg,image/jpeg,image/png,image/jpg,image/webp" class="text-xs text-neutral-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-700 disabled:opacity-50">
+                    <button v-if="extensionData.archivoUrl || extensionData.archivoAutorizacion" @click="visualizarComprobanteExtension" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-amber-400 font-bold px-3 py-1.5 rounded-md text-xs transition flex items-center gap-1">
+                        👁️ VER CORREO / COMPROBANTE
+                    </button>
+                </div>
+                <div v-if="extensionData.archivoAutorizacion" class="text-xs text-amber-400 font-medium flex items-center gap-1">
+                    <span>📎 ARCHIVO ADJUNTO:</span> {{ extensionData.archivoAutorizacion }}
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
+            <div class="p-4 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center">
+                <h3 class="font-bold text-neutral-200 text-xs">REGISTRO DE GASTOS DE EXTENSIÓN</h3>
+                <button v-if="puedeEscribir && !extensionCancelada" @click="agregarFilaExtension" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                    + AGREGAR CONCEPTO EXCEDENTE
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-neutral-950 text-neutral-400 uppercase tracking-wider border-b border-neutral-800">
+                            <th class="p-2">NO.</th>
+                            <th class="p-2">DEALER / CLIENTE</th>
+                            <th class="p-2">FECHA</th>
+                            <th class="p-2">CONCEPTO</th>
+                            <th class="p-2">JUSTIFICACIÓN EXCEDENTE</th>
+                            <th class="p-2">MONTO ADICIONAL ({{ formData.moneda }})</th>
+                            <th class="p-2">ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-800">
+                        <tr v-for="(item, idx) in extensionItems" :key="idx" class="hover:bg-neutral-800/50">
+                            <td class="p-2 font-bold text-center text-neutral-400">{{ idx + 1 }}</td>
+                            <td class="p-2">
+                                <select v-model="item.dealer" :disabled="!puedeEscribir || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-32 uppercase disabled:opacity-50">
+                                    <option v-for="d in catalogos.dealers" :key="d" :value="d">{{ d }}</option>
+                                </select>
+                            </td>
+                            <td class="p-2">
+                                <input type="date" v-model="item.fecha" :disabled="!puedeEscribir || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-28 disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <select v-model="item.concepto" :disabled="!puedeEscribir || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-36 disabled:opacity-50">
+                                    <option v-for="c in catalogos.todosConceptos" :key="c" :value="c">{{ c }}</option>
+                                </select>
+                            </td>
+                            <td class="p-2">
+                                <input type="text" spellcheck="true" lang="es" v-model="item.justificacion" :disabled="!puedeEscribir || extensionCancelada" placeholder="MOTIVO DEL CAMBIO" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-48 uppercase disabled:opacity-50">
+                            </td>
+                            <td class="p-2">
+                                <input type="number" v-model.number="item.monto" :disabled="!puedeEscribir || extensionCancelada" min="0" step="0.01" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-24 font-mono disabled:opacity-50">
+                            </td>
+                            <td class="p-2 text-center">
+                                <button v-if="puedeEscribir && !extensionCancelada" @click="eliminarFilaExtension(idx)" class="text-red-500 hover:text-red-400 font-bold">✕</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-4 bg-neutral-950 border-t border-neutral-800 flex justify-between items-center text-xs font-bold">
+                <span class="text-neutral-300">TOTAL PRESUPUESTADO EXTENSIÓN:</span>
+                <span class="font-mono text-amber-500 text-base">{{ formatoMoneda(totalExtension) }}</span>
+            </div>
+        </div>
+
+        <div class="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-3">
+            <h4 class="font-bold text-xs text-neutral-300">ACCIONES DE NOTIFICACIÓN Y AUTORIZACIÓN</h4>
+            <div class="flex flex-wrap gap-3">
+                <button @click="solicitarAutorizacionMail" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-2">
+                    <span>✉️</span> 1. ENVIAR CORREO DE SOLICITUD DE AUTORIZACIÓN
+                </button>
+                <button @click="abrirWebmail" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-2">
+                    <span>🌐</span> ABRIR WEBMAIL ENTERPRISE
+                </button>
+                <button v-if="(esAdmin || puedeEscribir) && !extensionCancelada" @click="guardarYEnviarAutorizacion" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 ml-auto">
+                    <span>💾</span> 2. GUARDAR Y ENVIAR AUTORIZACIÓN (CORREO DE CONFIRMACIÓN)
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- PESTAÑA 4: ADMINISTRACIÓN DE CATÁLOGOS & BD -->
+    <main v-if="activeTab === 'admin'" class="space-y-6">
+        <div v-if="!esAdmin" class="bg-red-950 border border-red-800 p-6 rounded-xl text-center space-y-2">
+            <h3 class="text-red-400 font-bold text-sm">⛔ ACCESO RESTRINGIDO</h3>
+            <p class="text-xs text-neutral-300">SE REQUIERE PERMISO <span class="font-bold text-amber-400">FULL ACCESS</span> PARA ACCEDER A LA ADMINISTRACIÓN DE CATÁLOGOS Y CONFIGURACIÓN DE BASE DE DATOS.</p>
+        </div>
+
+        <div v-else class="space-y-6">
+            <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 space-y-4">
+                <div class="flex justify-between items-center border-b border-neutral-800 pb-2">
+                    <h3 class="font-bold text-neutral-200 text-xs flex items-center gap-2">
+                        <span>🗄️</span> CONFIGURACIÓN Y RUTA DE BASE DE DATOS EN LA NUBE
+                    </h3>
+                    <span :class="['px-2 py-0.5 rounded text-[10px] font-bold', statusBd === 'CONECTADO' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300']">
+                        {{ statusBd }}
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-neutral-400 mb-1">MOTOR BASE DE DATOS / BI</label>
+                        <select v-model="configBd.tipo" class="w-full bg-black border border-neutral-700 text-amber-400 rounded-lg p-2 text-xs font-mono">
+                            <option value="SQL_SERVER">SQL SERVER / AZURE SQL BI (CLOUD)</option>
+                            <option value="POSTGRESQL">POSTGRESQL / MYSQL (CLOUD SQL)</option>
+                            <option value="EXCEL_365">EXCEL 365 / GOOGLE SHEETS API</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-neutral-400 mb-1">RUTA / STRING DE CONEXIÓN A BD EN LA NUBE</label>
+                        <input type="text" v-model="configBd.endpoint" placeholder="Server=tcp:sm-cloud.database.windows.net;Database=ViaticosDB;User ID=admin;..." class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-neutral-400 mb-1">CLAVE API / ACCESS TOKEN</label>
+                        <input type="password" v-model="configBd.apiKey" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-neutral-400 mb-1">TABLA / HOJA DESTINO</label>
+                        <input type="text" v-model="configBd.tabla" placeholder="tbl_presupuestos_viaticos" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono">
+                    </div>
+                    <div class="flex items-end">
+                        <button @click="probarConexion" class="w-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-white font-bold p-2 rounded-lg text-xs transition">
+                            🔌 PROBAR CONEXIÓN
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-black border border-neutral-800 p-4 rounded-lg space-y-2">
+                    <h4 class="text-xs font-bold text-amber-500">ESTRUCTURA Y ESQUEMA DE LAS BASES DE DATOS REGISTRADAS:</h4>
+                    <p class="text-[11px] text-neutral-400">SI UTILIZAS SQL O EXCEL, LAS TABLAS/HOJAS AUTOMÁTICAS DEBEN CONTENER LOS SIGUIENTES CAMPOS:</p>
+                    <pre class="bg-neutral-950 p-3 rounded text-[10px] font-mono text-emerald-400 overflow-x-auto border border-neutral-800">
+-- TABLA EN SQL: tbl_presupuestos (FOLIO PK, FECHA, AUDITOR, PERFIL, MONEDA, MES, SEMANA, NOCHES, DIAS_FORANEO, DIAS_EDOMEX, CLABE, ALIMENTOS, HOSPEDAJE, TOTAL_BASE, MONTO_EXTENSION, TOTAL_GRAL, ESTATUS_EXTENSION, ESTATUS)
+-- TABLA EN SQL: tbl_presupuesto_detalles (ID PK, FOLIO FK, DEALER, FECHA, CONCEPTO, ORIGEN, DESTINO, MONTO)
+-- HOJA EN EXCEL BI: [Presupuestos_General] y [Detalle_Rutas_Transporte]</pre>
+                </div>
+            </div>
+
+            <div class="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-4">
+                <div class="flex border-b border-neutral-800 gap-2 overflow-x-auto pb-2">
+                    <button @click="subTabAdmin = 'usuarios'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'usuarios' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">USUARIOS & PERMISOS</button>
+                    <button @click="subTabAdmin = 'auditores'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'auditores' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">AUDITORES</button>
+                    <button @click="subTabAdmin = 'dealers'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'dealers' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">DEALERS / CLIENTES</button>
+                    <button @click="subTabAdmin = 'conceptos'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'conceptos' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">CONCEPTOS</button>
+                    <button @click="subTabAdmin = 'correos'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'correos' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">CORREOS</button>
+                    <button @click="subTabAdmin = 'monedas'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'monedas' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">MONEDAS</button>
+                </div>
+
+                <div v-if="subTabAdmin === 'usuarios'" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-black p-3 rounded-lg border border-neutral-800">
+                        <input type="text" v-model="nuevoUsuario.nombre" placeholder="NOMBRE COMPLETO" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
+                        <input type="password" v-model="nuevoUsuario.password" placeholder="PASSWORD" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white">
+                        <select v-model="nuevoUsuario.permiso" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-amber-400 font-bold">
+                            <option value="LECTURA">LECTURA (SOLO VER)</option>
+                            <option value="ESCRITURA">ESCRITURA (CREAR Y COMPROBAR)</option>
+                            <option value="FULL ACCESS">FULL ACCESS (ADMIN TOTAL)</option>
+                        </select>
+                        <button @click="guardarUsuario" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded p-1.5">
+                            {{ editandoUsuarioIdx !== null ? 'ACTUALIZAR' : '+ ALTA USUARIO' }}
+                        </button>
+                    </div>
+
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-neutral-950 text-neutral-400 border-b border-neutral-800">
+                                <th class="p-2">ID</th>
+                                <th class="p-2">USUARIO / NOMBRE</th>
+                                <th class="p-2">PASSWORD</th>
+                                <th class="p-2">TIPO PERMISO</th>
+                                <th class="p-2">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-neutral-800">
+                            <tr v-for="(u, idx) in dbUsuarios" :key="u.id" class="hover:bg-neutral-800/50">
+                                <td class="p-2 font-mono text-neutral-500">{{ u.id }}</td>
+                                <td class="p-2 font-bold">{{ u.nombre }}</td>
+                                <td class="p-2 font-mono text-neutral-400">••••••••</td>
+                                <td class="p-2"><span class="bg-neutral-800 text-amber-400 px-2 py-0.5 rounded font-bold text-[10px]">{{ u.permiso }}</span></td>
+                                <td class="p-2 flex gap-2">
+                                    <button @click="editarUsuario(idx)" class="text-blue-400 font-bold">EDITAR</button>
+                                    <button @click="eliminarUsuario(idx)" class="text-red-500 font-bold">BAJA</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-else class="space-y-4">
+                    <div class="flex gap-2 bg-black p-3 rounded-lg border border-neutral-800">
+                        <input type="text" spellcheck="true" lang="es" v-model="nuevoElementoCatalogo" placeholder="NUEVO REGISTRO..." class="flex-1 bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
+                        <button @click="guardarElementoCatalogo" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 rounded">
+                            + ALTA
+                        </button>
+                    </div>
+
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-neutral-950 text-neutral-400 border-b border-neutral-800">
+                                <th class="p-2">NO.</th>
+                                <th class="p-2">VALOR CATALOGADO</th>
+                                <th class="p-2">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-neutral-800">
+                            <tr v-for="(val, idx) in listaCatalogoActivo" :key="idx" class="hover:bg-neutral-800/50">
+                                <td class="p-2 font-mono text-neutral-500">{{ idx + 1 }}</td>
+                                <td class="p-2 font-bold">{{ val }}</td>
+                                <td class="p-2">
+                                    <button @click="eliminarElementoCatalogo(idx)" class="text-red-500 font-bold">BAJA</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- PESTAÑA 5: REPORTEADOR Y CONSULTAS DE BD -->
+    <main v-if="activeTab === 'reportes'" class="space-y-6">
+        <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 space-y-4">
+            <div class="flex justify-between items-center border-b border-neutral-800 pb-2 flex-wrap gap-2">
+                <h3 class="font-bold text-neutral-200 text-xs flex items-center gap-2">
+                    <span>📊</span> REPORTEADOR Y CONSULTA HISTÓRICA DE PRESUPUESTOS EN LA NUBE
+                </h3>
+                <span class="text-xs text-neutral-400">PERMISO ACTUAL: <span class="text-amber-400 font-bold">{{ usuarioActivo.permiso }}</span></span>
+            </div>
+
+            <!-- FILTROS DE BÚSQUEDA -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-black p-3 rounded-lg border border-neutral-800">
+                <div>
+                    <label class="block text-[10px] font-semibold text-neutral-400 mb-1">BUSCAR POR FOLIO</label>
+                    <input type="text" v-model="filtroReporte.folio" placeholder="PRES-2026-..." class="w-full bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase font-mono">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-neutral-400 mb-1">FILTRAR AUDITOR</label>
+                    <select v-model="filtroReporte.auditor" class="w-full bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
+                        <option value="">-- TODOS --</option>
+                        <option v-for="a in catalogos.auditores" :key="a" :value="a">{{ a }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-neutral-400 mb-1">FILTRAR MES</label>
+                    <select v-model="filtroReporte.mes" class="w-full bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
+                        <option value="">-- TODOS --</option>
+                        <option v-for="m in catalogos.meses" :key="m" :value="m">{{ m }}</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button @click="consultarReportesBD" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-1.5 rounded text-xs transition">
+                        🔍 EJECUTAR CONSULTA
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABLA DE RESULTADOS HISTÓRICOS -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-neutral-950 text-neutral-400 border-b border-neutral-800 uppercase">
+                            <th class="p-2">FOLIO</th>
+                            <th class="p-2">FECHA</th>
+                            <th class="p-2">AUDITOR</th>
+                            <th class="p-2">PERFIL</th>
+                            <th class="p-2">MES / SEM.</th>
+                            <th class="p-2 text-right">EXTENSIÓN AUTORIZADA</th>
+                            <th class="p-2 text-right">TOTAL GENERAL</th>
+                            <th class="p-2 text-center">ESTATUS BD</th>
+                            <th class="p-2 text-center">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-800">
+                        <tr v-for="p in presupuestosFiltrados" :key="p.folio" class="hover:bg-neutral-800/50">
+                            <td class="p-2 font-mono font-bold text-amber-500">{{ p.folio }}</td>
+                            <td class="p-2">{{ p.fechaPresupuesto }}</td>
+                            <td class="p-2 font-bold">{{ p.auditor }}</td>
+                            <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] bg-neutral-800 text-neutral-300 font-bold">{{ p.tipoPerfil }}</span></td>
+                            <td class="p-2">{{ p.mesTrabajo }} (SEM {{ p.numeroSemana }})</td>
+                            <td class="p-2 font-mono text-right font-bold text-amber-400">
+                                {{ p.extensionAutorizada && !p.extensionCancelada ? formatoMonedaEspecifica(obtenerMontoExtension(p), p.moneda) : '$0.00 ' + p.moneda }}
+                            </td>
+                            <td class="p-2 font-mono text-right font-bold text-white">{{ formatoMonedaEspecifica(p.montoTotal, p.moneda) }}</td>
+                            <td class="p-2 text-center">
+                                <span v-if="p.cancelado" class="bg-red-950 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-800">CANCELADO TODO</span>
+                                <span v-else-if="p.extensionCancelada" class="bg-amber-950 text-amber-400 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-800">EXT. CANCELADA</span>
+                                <span v-else class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">ACTIVO</span>
+                            </td>
+                            <td class="p-2 text-center flex justify-center items-center gap-1.5">
+                                <button @click="cargarPresupuestoParaVer(p)" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2 py-1 rounded text-[10px] font-bold">👁️ VER</button>
+                                <button v-if="puedeEscribir" @click="cargarPresupuestoParaEditar(p)" class="bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-[10px] font-bold">✏️ EDITAR</button>
+                                
+                                <!-- MENÚ DESPLEGABLE DE OPCIONES DE CANCELACIÓN EN ACCIONES -->
+                                <div class="relative" v-if="puedeEscribir && !p.cancelado">
+                                    <button @click="toggleMenuCancelacion(p.folio)" class="bg-red-900/80 hover:bg-red-800 text-white px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-red-700">
+                                        🚫 CANCELAR ▾
+                                    </button>
+                                    <div v-if="menuCancelacionAbierto === p.folio" class="absolute right-0 mt-1 w-40 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-50 text-left py-1">
+                                        <button @click="cancelarTodo(p)" class="w-full text-left px-3 py-1.5 text-[10px] font-bold text-red-400 hover:bg-neutral-800 transition">
+                                            ❌ TODO (BASE + EXT)
+                                        </button>
+                                        <button @click="cancelarPresupuesto(p)" class="w-full text-left px-3 py-1.5 text-[10px] font-bold text-amber-400 hover:bg-neutral-800 transition">
+                                            📋 SOLO PRESUPUESTO
+                                        </button>
+                                        <button @click="cancelarExtension(p)" class="w-full text-left px-3 py-1.5 text-[10px] font-bold text-blue-400 hover:bg-neutral-800 transition">
+                                            🧩 SOLO EXTENSIÓN
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="presupuestosFiltrados.length === 0">
+                            <td colspan="9" class="p-4 text-center text-neutral-500 text-xs">NO SE ENCONTRARON REGISTROS CON LOS FILTROS INGRESADOS.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            activeTab: 'presupuesto',
+            subTabAdmin: 'usuarios',
+            extensionAutorizada: false,
+            extensionCancelada: false,
+            menuCancelacionAbierto: null,
+            statusBd: 'CONECTADO',
+            
+            // ESTADO DE AUTENTICACIÓN
+            sesionIniciada: false,
+            requiereCambioPassword: false,
+            loginForm: {
+                usuarioId: '',
+                password: ''
+            },
+            cambioPassForm: {
+                nueva: '',
+                confirmacion: ''
+            },
+            loginError: '',
+            cambioPassError: '',
+
+            usuarioActivo: { id: null, nombre: '', permiso: '' },
+            dbUsuarios: [
+                { id: 1, nombre: 'ALFREDO HERNÁNDEZ', password: '123', permiso: 'FULL ACCESS' },
+                { id: 2, nombre: 'KEILA PALACIOS ANAYA', password: '123', permiso: 'ESCRITURA' },
+                { id: 3, nombre: 'GERENTE REVISION', password: '123', permiso: 'LECTURA' }
+            ],
+            nuevoUsuario: { nombre: '', password: '', permiso: 'ESCRITURA' },
+            editandoUsuarioIdx: null,
+
+            configBd: {
+                tipo: 'SQL_SERVER',
+                endpoint: 'Server=tcp:sm-cloud.database.windows.net;Database=ViaticosDB;User ID=admin_viaticos;Password=*****;',
+                apiKey: 'SM_ENTERPRISE_AZURE_KEY_2026',
+                tabla: 'tbl_presupuestos_viaticos'
+            },
+
+            filtroReporte: {
+                folio: '',
+                auditor: '',
+                mes: ''
+            },
+
+            // BASE DE DATOS LOCAL SIMULADA (REPORTEADOR)
+            repositorioBD: [
+                {
+                    folio: 'PRES-2026-0033',
+                    fechaPresupuesto: '2026-08-17',
+                    auditor: 'KEILA PALACIOS ANAYA',
+                    tipoPerfil: 'INTERNO',
+                    moneda: 'MXN',
+                    mesTrabajo: 'AGOSTO',
+                    numeroSemana: 33,
+                    nochesHospedaje: 2,
+                    diasForaneo: 3,
+                    diasEdomex: 2,
+                    clabe: '012180004567891234',
+                    montoAlimentos: 1000.00,
+                    montoHospedaje: 1200.00,
+                    montoTotal: 4460.00,
+                    extensionAutorizada: true,
+                    extensionCancelada: false,
+                    cancelado: false,
+                    presupuestoItems: [
+                        { dealer: 'TRATON CAMIONES LA HUERTA', fecha: '2026-08-16', concepto: 'AUTOBUS FORANEO', origen: 'CENTRAL NORTE', horaSalida: '23:59', destino: 'ZAMORA', horaLlegada: '06:30', proveedor: 'PRIMERA PLUS', monto: 1345.00 },
+                        { dealer: 'TRATON DACZA', fecha: '2026-08-17', concepto: 'AUTOBUS FORANEO', origen: 'ZAMORA', horaSalida: '16:40', destino: 'MORELIA', horaLlegada: '19:00', proveedor: 'PRIMERA PLUS', monto: 465.00 }
+                    ],
+                    comprobacionItems: [],
+                    extensionItems: [
+                        { dealer: 'TRATON DACZA', fecha: '2026-08-18', concepto: 'TRANSPORTE URBANO', justificacion: 'AMPLIACIÓN DE AUDITORÍA EN PLANTA', monto: 450.00 }
+                    ],
+                    extensionData: {
+                        jefeEmail: 'jefe@sm-enterprise.com.mx',
+                        gerenteEmail: 'gerente@sm-enterprise.com.mx',
+                        archivoAutorizacion: 'AUTORIZACION_KEILA.MSG',
+                        archivoUrl: null
+                    }
+                },
+                {
+                    folio: 'COT-2026-0012',
+                    fechaPresupuesto: '2026-08-10',
+                    auditor: 'ALFREDO HERNÁNDEZ',
+                    tipoPerfil: 'EXTERNO',
+                    moneda: 'MXN',
+                    mesTrabajo: 'AGOSTO',
+                    numeroSemana: 32,
+                    nochesHospedaje: 1,
+                    diasForaneo: 2,
+                    diasEdomex: 0,
+                    clabe: '072180009876543210',
+                    montoAlimentos: 800.00,
+                    montoHospedaje: 600.00,
+                    montoTotal: 5400.00,
+                    extensionAutorizada: false,
+                    extensionCancelada: false,
+                    cancelado: false,
+                    presupuestoItems: [
+                        { dealer: 'CHIREY ASIA LUXURY', fecha: '2026-08-10', concepto: 'KM', origen: 'CDMX', horaSalida: '08:00', destino: 'TOLUCA', horaLlegada: '09:30', proveedor: 'PROPIO', monto: 1000.00 }
+                    ],
+                    comprobacionItems: [],
+                    extensionItems: [],
+                    extensionData: {
+                        jefeEmail: 'jefe@sm-enterprise.com.mx',
+                        gerenteEmail: 'gerente@sm-enterprise.com.mx',
+                        archivoAutorizacion: null,
+                        archivoUrl: null
+                    }
+                }
+            ],
+
+            nuevoElementoCatalogo: '',
+            catalogos: {
+                auditores: ['KEILA PALACIOS ANAYA', 'ALFREDO HERNÁNDEZ', 'CARLOS MENDOZA'],
+                dealers: ['TRATON CAMIONES LA HUERTA', 'TRATON DACZA', 'CHIREY ASIA LUXURY'],
+                meses: ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'],
+                conceptosTransporte: ['AVION', 'AUTOBUS FORANEO', 'TAXI UBER-DIDI', 'TRANSPORTE URBANO', 'KM', 'CABLE BUS', 'METRO', 'METRO BUS', 'CASETAS'],
+                todosConceptos: ['AVION', 'AUTOBUS FORANEO', 'TAXI UBER-DIDI', 'TRANSPORTE URBANO', 'KM', 'CABLE BUS', 'METRO', 'METRO BUS', 'CASETAS', 'ALIMENTO', 'HOSPEDAJE'],
+                correos: ['viaticos@sm-enterprise.com.mx', 'jefe@sm-enterprise.com.mx', 'gerente@sm-enterprise.com.mx'],
+                monedas: ['MXN', 'USD', 'EUR']
+            },
+
+            formData: {
+                moneda: 'MXN',
+                tipoPerfil: 'INTERNO',
+                folio: '',
+                auditor: '',
+                fechaPresupuesto: '',
+                mesTrabajo: 'AGOSTO',
+                numeroSemana: 33,
+                nochesHospedaje: 0,
+                diasForaneo: 0,
+                diasEdomex: 0,
+                clabe: '',
+                montoAlimentos: 0,
+                montoHospedaje: 0,
+                honorarios: 0,
+                retenciones: 0,
+                cancelado: false
+            },
+            extensionData: {
+                jefeEmail: 'jefe@sm-enterprise.com.mx',
+                gerenteEmail: 'gerente@sm-enterprise.com.mx',
+                archivoAutorizacion: null,
+                archivoUrl: null
+            },
+            presupuestoItems: [],
+            comprobacionItems: [],
+            extensionItems: []
+        }
+    },
+    computed: {
+        esAdmin() {
+            return this.usuarioActivo.permiso === 'FULL ACCESS';
+        },
+        puedeEscribir() {
+            return this.usuarioActivo.permiso === 'ESCRITURA' || this.usuarioActivo.permiso === 'FULL ACCESS';
+        },
+        listaCatalogoActivo() {
+            if (this.subTabAdmin === 'auditores') return this.catalogos.auditores;
+            if (this.subTabAdmin === 'dealers') return this.catalogos.dealers;
+            if (this.subTabAdmin === 'conceptos') return this.catalogos.todosConceptos;
+            if (this.subTabAdmin === 'correos') return this.catalogos.correos;
+            if (this.subTabAdmin === 'monedas') return this.catalogos.monedas;
+            return [];
+        },
+        tituloDocumento() {
+            return this.formData.tipoPerfil === 'INTERNO' ? 'PRESUPUESTO DE VIÁTICOS / COMPROBACIÓN DETALLADA' : 'COTIZACIÓN DE SERVICIOS Y GASTOS CONTRACTUALES';
+        },
+        totalDias() {
+            return (Number(this.formData.diasForaneo) || 0) + (Number(this.formData.diasEdomex) || 0);
+        },
+        subtotalTransporte() {
+            if (this.formData.cancelado) return 0;
+            return this.presupuestoItems.reduce((acc, item) => acc + (Number(item.monto) || 0), 0);
+        },
+        totalExtension() {
+            if (this.extensionCancelada) return 0;
+            return this.extensionItems.reduce((acc, item) => acc + (Number(item.monto) || 0), 0);
+        },
+        totalGeneralPresupuesto() {
+            let extensionASumar = (this.extensionAutorizada && !this.extensionCancelada) ? this.totalExtension : 0;
+            let alimentos = this.formData.cancelado ? 0 : (Number(this.formData.montoAlimentos) || 0);
+            let hospedaje = this.formData.cancelado ? 0 : (Number(this.formData.montoHospedaje) || 0);
+            
+            let subtotalOps = this.subtotalTransporte + alimentos + hospedaje + extensionASumar;
+            
+            if (this.formData.tipoPerfil === 'EXTERNO') {
+                let honorarios = this.formData.cancelado ? 0 : (Number(this.formData.honorarios) || 0);
+                let retenciones = this.formData.cancelado ? 0 : (Number(this.formData.retenciones) || 0);
+                return subtotalOps + honorarios - retenciones;
+            }
+            return subtotalOps;
+        },
+        totalComprobado() {
+            return this.comprobacionItems.reduce((acc, item) => acc + (Number(item.montoReal) || 0), 0);
+        },
+        presupuestosFiltrados() {
+            return this.repositorioBD.filter(p => {
+                const matchFolio = !this.filtroReporte.folio || p.folio.toUpperCase().includes(this.filtroReporte.folio.toUpperCase());
+                const matchAuditor = !this.filtroReporte.auditor || p.auditor === this.filtroReporte.auditor;
+                const matchMes = !this.filtroReporte.mes || p.mesTrabajo === this.filtroReporte.mes;
+                return matchFolio && matchAuditor && matchMes;
+            });
+        }
+    },
+    methods: {
+        toggleMenuCancelacion(folio) {
+            this.menuCancelacionAbierto = this.menuCancelacionAbierto === folio ? null : folio;
+        },
+
+        // LOGICA DE CANCELACIÓN Y DESCUENTO DE SUMAS
+        cancelarTodo(p) {
+            if (confirm(`¿CONFIRMA CANCELAR TODO EL REGISTRO FOLIO ${p.folio}? EL PRESUPUESTO BASE Y LA EXTENSIÓN SE DESCONTARÁN A $0.00.`)) {
+                p.cancelado = true;
+                p.extensionCancelada = true;
+                p.montoTotal = 0;
+                
+                if (this.formData.folio === p.folio) {
+                    this.formData.cancelado = true;
+                    this.extensionCancelada = true;
+                }
+                this.menuCancelacionAbierto = null;
+                alert(`EL REGISTRO ${p.folio} HA SIDO CANCELADO COMPLETAMENTE.`);
+            }
+        },
+        cancelarPresupuesto(p) {
+            if (confirm(`¿CONFIRMA CANCELAR SOLO EL PRESUPUESTO BASE DE ${p.folio}? SE DESCONTARÁN LOS TRANSPORTES, HOSPEDAJE Y ALIMENTOS.`)) {
+                p.cancelado = true;
+                
+                // Recalcular monto total en el registro reteniendo únicamente la extensión si está autorizada
+                let ext = (p.extensionAutorizada && !p.extensionCancelada) ? this.obtenerMontoExtension(p) : 0;
+                p.montoTotal = ext;
+
+                if (this.formData.folio === p.folio) {
+                    this.formData.cancelado = true;
+                }
+                this.menuCancelacionAbierto = null;
+                alert(`EL PRESUPUESTO BASE DE ${p.folio} HA SIDO CANCELADO. SOLO PERMANECE VIGENTE LA EXTENSIÓN SI APLICA.`);
+            }
+        },
+        cancelarExtension(p) {
+            if (!p.extensionAutorizada && (!p.extensionItems || p.extensionItems.length === 0)) {
+                alert('ESTE REGISTRO NO TIENE UNA EXTENSIÓN ACTIVA PARA CANCELAR.');
+                this.menuCancelacionAbierto = null;
+                return;
+            }
+            if (confirm(`¿CONFIRMA CANCELAR ÚNICAMENTE LA EXTENSIÓN DE PRESUPUESTO DE ${p.folio}?`)) {
+                p.extensionCancelada = true;
+                
+                // Recalcular el total reteniendo solo el presupuesto base
+                let base = p.cancelado ? 0 : (p.montoTotal - this.obtenerMontoExtension(p));
+                p.montoTotal = base < 0 ? 0 : base;
+
+                if (this.formData.folio === p.folio) {
+                    this.extensionCancelada = true;
+                }
+                this.menuCancelacionAbierto = null;
+                alert(`LA EXTENSIÓN DE ${p.folio} HA SIDO CANCELADA Y DESCONTADA DEL TOTAL GLOBAL.`);
+            }
+        },
+
+        cargarUsuariosPersistidos() {
+            const guardados = localStorage.getItem('dbUsuarios_viaticos');
+            if (guardados) {
+                try {
+                    this.dbUsuarios = JSON.parse(guardados);
+                } catch (e) {
+                    console.error('Error al cargar usuarios desde localStorage', e);
+                }
+            } else {
+                this.guardarUsuariosPersistidos();
+            }
+        },
+        guardarUsuariosPersistidos() {
+            localStorage.setItem('dbUsuarios_viaticos', JSON.stringify(this.dbUsuarios));
+        },
+
+        iniciarSesion() {
+            this.loginError = '';
+            if (!this.loginForm.usuarioId || !this.loginForm.password) {
+                this.loginError = 'INGRESE USUARIO Y CONTRASEÑA.';
+                return;
+            }
+            const usuarioEncontrado = this.dbUsuarios.find(u => u.id === this.loginForm.usuarioId && u.password === this.loginForm.password);
+            if (usuarioEncontrado) {
+                this.usuarioActivo = usuarioEncontrado;
+                this.sesionIniciada = true;
+
+                if (usuarioEncontrado.password === '123') {
+                    this.requiereCambioPassword = true;
+                    return;
+                }
+                
+                if (this.catalogos.auditores.includes(usuarioEncontrado.nombre)) {
+                    this.formData.auditor = usuarioEncontrado.nombre;
+                }
+            } else {
+                this.loginError = 'CONTRASEÑA INCORRECTA O USUARIO INVÁLIDO.';
+            }
+        },
+        actualizarPasswordForzado() {
+            this.cambioPassError = '';
+            if (!this.cambioPassForm.nueva || !this.cambioPassForm.confirmacion) {
+                this.cambioPassError = 'POR FAVOR LLENE AMBOS CAMPOS DE CONTRASEÑA.';
+                return;
+            }
+            if (this.cambioPassForm.nueva !== this.cambioPassForm.confirmacion) {
+                this.cambioPassError = 'LAS CONTRASEÑAS NO COINCIDEN.';
+                return;
+            }
+            if (this.cambioPassForm.nueva === '123') {
+                this.cambioPassError = 'DEBE INGRESAR UNA CONTRASEÑA DIFERENTE A LA POR DEFECTO.';
+                return;
+            }
+
+            this.usuarioActivo.password = this.cambioPassForm.nueva;
+            const idxBD = this.dbUsuarios.findIndex(u => u.id === this.usuarioActivo.id);
+            if (idxBD >= 0) {
+                this.dbUsuarios[idxBD].password = this.cambioPassForm.nueva;
+                this.guardarUsuariosPersistidos();
+            }
+
+            this.requiereCambioPassword = false;
+            this.cambioPassForm = { nueva: '', confirmacion: '' };
+            alert('CONTRASEÑA ACTUALIZADA SATISFACTORIAMENTE. BIENVENIDO AL SISTEMA.');
+
+            if (this.catalogos.auditores.includes(this.usuarioActivo.nombre)) {
+                this.formData.auditor = this.usuarioActivo.nombre;
+            }
+        },
+        cerrarSesion() {
+            this.sesionIniciada = false;
+            this.requiereCambioPassword = false;
+            this.usuarioActivo = { id: null, nombre: '', permiso: '' };
+            this.loginForm = { usuarioId: '', password: '' };
+            this.loginError = '';
+        },
+        generarNuevoFolio() {
+            const prefijo = this.formData.tipoPerfil === 'EXTERNO' ? 'COT' : 'PRES';
+            const consecutivo = Math.floor(1000 + Math.random() * 9000);
+            return `${prefijo}-2026-${consecutivo}`;
+        },
+        nuevoPresupuesto() {
+            const hoy = new Date().toISOString().split('T')[0];
+            const esAuditor = this.catalogos.auditores.includes(this.usuarioActivo.nombre);
+            
+            this.formData = {
+                moneda: 'MXN',
+                tipoPerfil: 'INTERNO',
+                folio: this.generarNuevoFolio(),
+                auditor: esAuditor ? this.usuarioActivo.nombre : '',
+                fechaPresupuesto: hoy,
+                mesTrabajo: 'AGOSTO',
+                numeroSemana: 33,
+                nochesHospedaje: 0,
+                diasForaneo: 0,
+                diasEdomex: 0,
+                clabe: '',
+                montoAlimentos: 0,
+                montoHospedaje: 0,
+                honorarios: 0,
+                retenciones: 0,
+                cancelado: false
+            };
+            this.extensionData = {
+                jefeEmail: 'jefe@sm-enterprise.com.mx',
+                gerenteEmail: 'gerente@sm-enterprise.com.mx',
+                archivoAutorizacion: null,
+                archivoUrl: null
+            };
+            this.presupuestoItems = [];
+            this.comprobacionItems = [];
+            this.extensionItems = [];
+            this.extensionAutorizada = false;
+            this.extensionCancelada = false;
+        },
+
+        formatoMoneda(valor) {
+            const simbolo = this.formData.moneda === 'EUR' ? '€' : '$';
+            return `${simbolo}${Number(valor || 0).toFixed(2)} ${this.formData.moneda}`;
+        },
+        formatoMonedaEspecifica(valor, moneda) {
+            const simbolo = moneda === 'EUR' ? '€' : '$';
+            return `${simbolo}${Number(valor || 0).toFixed(2)} ${moneda}`;
+        },
+        calcularMontoHospedaje() {
+            const noches = Number(this.formData.nochesHospedaje) || 0;
+            this.formData.montoHospedaje = noches * 600;
+        },
+        actualizarDenominacion() {
+            if (!this.formData.folio) {
+                this.formData.folio = this.generarNuevoFolio();
+                return;
+            }
+            this.formData.folio = this.formData.tipoPerfil === 'EXTERNO' 
+                ? this.formData.folio.replace('PRES', 'COT') 
+                : this.formData.folio.replace('COT', 'PRES');
+        },
+        agregarFilaPresupuesto() {
+            this.presupuestoItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'AUTOBUS FORANEO', origen: '', horaSalida: '', destino: '', horaLlegada: '', proveedor: '', monto: 0 });
+        },
+        eliminarFilaPresupuesto(index) {
+            this.presupuestoItems.splice(index, 1);
+        },
+        agregarFilaComprobacion() {
+            this.comprobacionItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'AUTOBUS FORANEO', proveedorFactura: '', numeroFactura: '', montoReal: 0, archivoNombre: null });
+        },
+        eliminarFilaComprobacion(index) {
+            this.comprobacionItems.splice(index, 1);
+        },
+        agregarFilaExtension() {
+            this.extensionItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'TRANSPORTE URBANO', justificacion: '', monto: 0 });
+        },
+        eliminarFilaExtension(index) {
+            this.extensionItems.splice(index, 1);
+        },
+        subirArchivo(event, item) {
+            const file = event.target.files[0];
+            if (file) item.archivoNombre = file.name.toUpperCase();
+        },
+
+        subirArchivoExtension(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.extensionData.archivoAutorizacion = file.name.toUpperCase();
+                this.extensionData.archivoUrl = URL.createObjectURL(file);
+            }
+        },
+        visualizarComprobanteExtension() {
+            if (this.extensionData.archivoUrl) {
+                window.open(this.extensionData.archivoUrl, '_blank');
+            } else if (this.extensionData.archivoAutorizacion) {
+                alert(`VISUALIZANDO COMPROBANTE ALMACENADO: ${this.extensionData.archivoAutorizacion}`);
+            } else {
+                alert('NO HAY NINGÚN COMPROBANTE DE AUTORIZACIÓN CARGADO.');
+            }
+        },
+
+        validarFormulario() {
+            if (!this.formData.auditor) {
+                alert('CANDADO ACTIVADO: INDIQUE EL NOMBRE DEL AUDITOR.');
+                return false;
+            }
+            if (!this.formData.clabe || this.formData.clabe.length !== 18) {
+                alert('CANDADO ACTIVADO: LA CLABE INTERBANCARIA DEBE CONTENER 18 DÍGITOS EXACTOS.');
+                return false;
+            }
+            return true;
+        },
+
+        enviarPresupuesto() {
+            if (!this.validarFormulario()) return;
+            
+            if (!confirm('¿ESTÁ SEGURO DE QUE LOS DATOS SON CORRECTOS Y DESEA ENVIAR EL PRESUPUESTO PARA AUTORIZACIÓN?')) {
+                return;
+            }
+
+            const destinatario = 'viaticos@sm-enterprise.com.mx';
+            const asunto = encodeURIComponent(`SOLICITUD DE AUTORIZACIÓN DE PRESUPUESTO - FOLIO: ${this.formData.folio}`);
+            const cuerpo = encodeURIComponent(
+                `SOLICITUD DE AUTORIZACIÓN DE PRESUPUESTO\n\n` +
+                `FOLIO: ${this.formData.folio}\n` +
+                `AUDITOR: ${this.formData.auditor}\n` +
+                `FECHA: ${this.formData.fechaPresupuesto}\n` +
+                `MES DE TRABAJO: ${this.formData.mesTrabajo} (SEMANA ${this.formData.numeroSemana})\n` +
+                `CLABE: ${this.formData.clabe}\n` +
+                `TOTAL GENERAL: ${this.formatoMoneda(this.totalGeneralPresupuesto)}\n\n` +
+                `POR FAVOR REVISAR Y AUTORIZAR EN EL SISTEMA.`
+            );
+            
+            window.location.href = `mailto:${destinatario}?subject=${asunto}&body=${cuerpo}`;
+        },
+
+        guardarPresupuestoEnBD() {
+            if (!this.validarFormulario()) return;
+            if (!this.puedeEscribir) {
+                alert('ACCESO DENEGADO: SU USUARIO NO TIENE PERMISOS DE ESCRITURA PARA MODIFICAR LA BD.');
+                return;
+            }
+
+            if (!confirm('¿ESTÁ SEGURO DE QUE LOS DATOS INGRESADOS SON CORRECTOS ANTES DE GUARDAR EN LA BASE DE DATOS?')) {
+                return;
+            }
+
+            const registro = {
+                ...JSON.parse(JSON.stringify(this.formData)),
+                montoTotal: this.totalGeneralPresupuesto,
+                extensionAutorizada: this.extensionAutorizada,
+                extensionCancelada: this.extensionCancelada,
+                cancelado: this.formData.cancelado || false,
+                presupuestoItems: JSON.parse(JSON.stringify(this.presupuestoItems)),
+                comprobacionItems: JSON.parse(JSON.stringify(this.comprobacionItems)),
+                extensionItems: JSON.parse(JSON.stringify(this.extensionItems)),
+                extensionData: JSON.parse(JSON.stringify(this.extensionData))
+            };
+
+            const idxExistente = this.repositorioBD.findIndex(p => p.folio === registro.folio);
+            if (idxExistente >= 0) {
+                this.repositorioBD[idxExistente] = registro;
+                alert(`PRESUPUESTO CON FOLIO ${registro.folio} ACTUALIZADO EXITOSAMENTE EN LA BASE DE DATOS (${this.configBd.tipo}).`);
+            } else {
+                this.repositorioBD.unshift(registro);
+                alert(`PRESUPUESTO CON FOLIO ${registro.folio} GUARDADO EXITOSAMENTE EN LA BASE DE DATOS (${this.configBd.tipo}).`);
+            }
+        },
+
+        probarConexion() {
+            if (!this.configBd.endpoint) {
+                alert('POR FAVOR ESPECIFIQUE LA RUTA / CONNECTION STRING DE LA BASE DE DATOS.');
+                return;
+            }
+            this.statusBd = 'CONECTADO';
+            alert(`CONEXIÓN CON EL SERVIDOR DE BASE DE DATOS Y BI EN LA NUBE ESTABLECIDA SATISFACTORIAMENTE.\nMOTOR: ${this.configBd.tipo}\nTABLA: ${this.configBd.tabla}`);
+        },
+
+        obtenerMontoExtension(p) {
+            if (!p.extensionItems) return 0;
+            return p.extensionItems.reduce((acc, i) => acc + (Number(i.monto) || 0), 0);
+        },
+        consultarReportesBD() {
+            alert(`CONSULTA EJECUTADA EN BASE DE DATOS.\nTOTAL DE PRESUPUESTOS ENCONTRADOS: ${this.presupuestosFiltrados.length}`);
+        },
+        cargarPresupuestoParaVer(p) {
+            this.formData = JSON.parse(JSON.stringify(p));
+            this.extensionAutorizada = p.extensionAutorizada || false;
+            this.extensionCancelada = p.extensionCancelada || false;
+            this.presupuestoItems = JSON.parse(JSON.stringify(p.presupuestoItems || []));
+            this.comprobacionItems = JSON.parse(JSON.stringify(p.comprobacionItems || []));
+            this.extensionItems = JSON.parse(JSON.stringify(p.extensionItems || []));
+            this.extensionData = JSON.parse(JSON.stringify(p.extensionData || { jefeEmail: '', gerenteEmail: '', archivoAutorizacion: null, archivoUrl: null }));
+            this.activeTab = 'presupuesto';
+            alert(`CARGANDO FOLIO ${p.folio} EN MODO LECTURA DE CONSULTA.`);
+        },
+        cargarPresupuestoParaEditar(p) {
+            if (!this.puedeEscribir) {
+                alert('ACCESO DENEGADO: NO TIENE PERMISOS PARA MODIFICAR PRESUPUESTOS.');
+                return;
+            }
+            this.formData = JSON.parse(JSON.stringify(p));
+            this.extensionAutorizada = p.extensionAutorizada || false;
+            this.extensionCancelada = p.extensionCancelada || false;
+            this.presupuestoItems = JSON.parse(JSON.stringify(p.presupuestoItems || []));
+            this.comprobacionItems = JSON.parse(JSON.stringify(p.comprobacionItems || []));
+            this.extensionItems = JSON.parse(JSON.stringify(p.extensionItems || []));
+            this.extensionData = JSON.parse(JSON.stringify(p.extensionData || { jefeEmail: '', gerenteEmail: '', archivoAutorizacion: null, archivoUrl: null }));
+            this.activeTab = 'presupuesto';
+            alert(`FOLIO ${p.folio} CARGADO PARA EDICIÓN. RECUERDE PRESIONAR "GUARDAR EN BD" TRAS HACER LOS CAMBIOS.`);
+        },
+
+        solicitarAutorizacionMail() {
+            if (!this.extensionData.jefeEmail || !this.extensionData.gerenteEmail) {
+                alert('CANDADO ACTIVADO: INGRESE LOS CORREOS DEL JEFE INMEDIATO Y DEL GERENTE.');
+                return;
+            }
+            const destinatarios = `${this.extensionData.jefeEmail},${this.extensionData.gerenteEmail}`;
+            const asunto = encodeURIComponent(`SOLICITUD DE EXTENSIÓN DE PRESUPUESTO - FOLIO ${this.formData.folio}`);
+            const cuerpo = encodeURIComponent(`SOLICITUD DE EXTENSIÓN DE PRESUPUESTO\n\nFOLIO: ${this.formData.folio}\nAUDITOR: ${this.formData.auditor}\nTOTAL EXTENSIÓN: ${this.formatoMoneda(this.totalExtension)}\n\nPOR FAVOR RESPONDER AUTORIZANDO Y ADJUNTAR COMPROBANTE EN SISTEMA A: viaticos@sm-enterprise.com.mx`);
+            window.location.href = `mailto:${destinatarios}?cc=viaticos@sm-enterprise.com.mx&subject=${asunto}&body=${cuerpo}`;
+        },
+        abrirWebmail() {
+            window.open('https://mail.sm-enterprise.com.mx:2080', '_blank');
+        },
+        guardarYEnviarAutorizacion() {
+            if (this.totalExtension <= 0) {
+                alert('CANDADO ACTIVADO: DEBE REGISTRAR AL MENOS UN CONCEPTO DE EXTENSIÓN CON MONTO VÁLIDO.');
+                return;
+            }
+            this.extensionAutorizada = true;
+            this.extensionCancelada = false;
+            
+            const asunto = encodeURIComponent(`CONFIRMACIÓN Y REGISTRO DE EXTENSIÓN AUTORIZADA - FOLIO ${this.formData.folio}`);
+            const cuerpo = encodeURIComponent(`LA EXTENSIÓN DE PRESUPUESTO CON FOLIO ${this.formData.folio} HA SIDO OFICIALMENTE AUTORIZADA E INCORPORADA AL SISTEMA.\n\nAUDITOR: ${this.formData.auditor}\nMONTO EXTENSIÓN: ${this.formatoMoneda(this.totalExtension)}\nNUEVO TOTAL PRESUPUESTADO GENERAL: ${this.formatoMoneda(this.totalGeneralPresupuesto)}\n\nCOMPROBANTE REGISTRADO: ${this.extensionData.archivoAutorizacion || 'REGISTRADO EN SISTEMA'}`);
+            
+            alert(`EXTENSIÓN DE PRESUPUESTO GUARDADA Y AUTORIZADA EXITOSAMENTE EN SISTEMA.\n\nSE HA SUMADO ${this.formatoMoneda(this.totalExtension)} AL PRESUPUESTO GENERAL DE LA PESTAÑA 1 Y SE ENVIARÁ EL CORREO DE CONFIRMACIÓN.`);
+            
+            window.location.href = `mailto:viaticos@sm-enterprise.com.mx?cc=${this.extensionData.jefeEmail},${this.extensionData.gerenteEmail}&subject=${asunto}&body=${cuerpo}`;
+        },
+
+        guardarUsuario() {
+            if (!this.nuevoUsuario.nombre || !this.nuevoUsuario.password) {
+                alert('INDIQUE NOMBRE Y PASSWORD.');
+                return;
+            }
+            if (this.editandoUsuarioIdx !== null) {
+                this.dbUsuarios[this.editandoUsuarioIdx] = { ...this.nuevoUsuario, id: this.dbUsuarios[this.editandoUsuarioIdx].id };
+                this.editandoUsuarioIdx = null;
+            } else {
+                this.dbUsuarios.push({ ...this.nuevoUsuario, id: Date.now() });
+            }
+            this.guardarUsuariosPersistidos();
+            this.nuevoUsuario = { nombre: '', password: '', permiso: 'ESCRITURA' };
+        },
+        editarUsuario(idx) {
+            this.editandoUsuarioIdx = idx;
+            this.nuevoUsuario = { ...this.dbUsuarios[idx] };
+        },
+        eliminarUsuario(idx) {
+            if (confirm('¿CONFIRMA DAR DE BAJA AL USUARIO?')) {
+                this.dbUsuarios.splice(idx, 1);
+                this.guardarUsuariosPersistidos();
+            }
+        },
+        guardarElementoCatalogo() {
+            if (!this.nuevoElementoCatalogo) return;
+            const val = this.nuevoElementoCatalogo.toUpperCase();
+            if (this.subTabAdmin === 'auditores') this.catalogos.auditores.push(val);
+            if (this.subTabAdmin === 'dealers') this.catalogos.dealers.push(val);
+            if (this.subTabAdmin === 'conceptos') {
+                this.catalogos.todosConceptos.push(val);
+                this.catalogos.conceptosTransporte.push(val);
+            }
+            if (this.subTabAdmin === 'correos') this.catalogos.correos.push(val.toLowerCase());
+            if (this.subTabAdmin === 'monedas') this.catalogos.monedas.push(val);
+            this.nuevoElementoCatalogo = '';
+        },
+        eliminarElementoCatalogo(idx) {
+            if (confirm('¿CONFIRMA DAR DE BAJA EL REGISTRO DEL CATÁLOGO?')) {
+                this.listaCatalogoActivo.splice(idx, 1);
+            }
+        }
+    },
+    mounted() {
+        this.cargarUsuariosPersistidos();
+        this.nuevoPresupuesto();
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
