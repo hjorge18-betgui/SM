@@ -174,22 +174,13 @@
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">NOCHES DE HOSPEDAJE</label>
                 <input type="number" v-model.number="formData.nochesHospedaje" @input="calcularMontoHospedaje" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
             </div>
-
-            <div v-if="formData.tipoPerfil === 'INTERNO'">
+            <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS POR AUDITAR FORÁNEO</label>
                 <input type="number" v-model.number="formData.diasForaneo" @input="calcularMontoAlimentos" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
             </div>
-            <div v-if="formData.tipoPerfil === 'INTERNO'">
+            <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS POR AUDITAR ESTADO DE MÉXICO</label>
                 <input type="number" v-model.number="formData.diasEdomex" @input="calcularMontoAlimentos" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
-            </div>
-            <div v-if="formData.tipoPerfil === 'EXTERNO'">
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS PERSONAL EXTERNO</label>
-                <input type="number" v-model.number="formData.diasPersonalExterno" @input="calcularMontoAlimentos" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
-            </div>
-            <div v-if="formData.tipoPerfil !== 'INTERNO'">
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS CUOTAS ESPECIALES</label>
-                <input type="number" v-model.number="formData.diasCuotasEspeciales" @input="calcularMontoAlimentos" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
             </div>
             <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">TOTAL DE DÍAS</label>
@@ -328,59 +319,17 @@
     </main>
 
     <main v-if="activeTab === 'comprobacion'" class="space-y-6">
-        <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">NOMBRE DEL AUDITOR</label>
-                <select v-model="formData.auditor" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
-                    <option value="">-- SELECCIONAR AUDITOR --</option>
-                    <option v-for="aud in catalogos.auditores" :key="aud" :value="aud">{{ aud }}</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">FOLIO AUTOGENERADO DE PRESUPUESTO</label>
-                <div class="flex gap-2">
-                    <select v-model="folioBusqueda" @change="buscarYConciliarFolio" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold rounded-lg p-2.5 text-xs font-mono focus:ring-2 focus:ring-amber-500">
-                        <option value="">-- SELECCIONAR O BUSCAR FOLIO --</option>
-                        <option v-for="p in repositorioBD" :key="p.folio" :value="p.folio">{{ p.folio }} - {{ p.auditor }} ({{ formatoMonedaEspecifica(p.montoTotal, p.moneda) }})</option>
-                    </select>
-                    <button @click="buscarYConciliarFolio" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 rounded-lg text-xs transition">
-                        BUSCAR
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <div class="bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center flex-wrap gap-2">
             <div>
                 <h3 class="font-bold text-neutral-200 text-xs">EJECUCIÓN PRESUPUESTAL Y COMPROBACIÓN REAL POR DÍA</h3>
-                <p class="text-[10px] text-neutral-400">FOLIO CONSULTADO: <span class="text-amber-400 font-mono font-bold">{{ formData.folio || 'N/A' }}</span> | PRESUPUESTO BASE MONTO: <span class="text-white font-mono font-bold">{{ formatoMoneda(totalGeneralPresupuesto) }}</span></p>
+                <p class="text-[10px] text-neutral-400">REGISTRA TUS GASTOS REALES CON NÚMERO DE FACTURA/NOTA Y CARGA COMPROBANTES FISCALES.</p>
             </div>
             <div class="text-right">
-                <span class="text-[10px] text-neutral-400 block">SALDO RESTANTE EN TIEMPO REAL</span>
-                <span :class="['font-mono font-bold text-sm', saldoConciliacion < 0 ? 'text-red-500' : saldoConciliacion > 0 ? 'text-emerald-400' : 'text-blue-400']">
-                    {{ formatoMoneda(saldoConciliacion) }}
+                <span class="text-[10px] text-neutral-400 block">SALDO FINAL (VARIACIÓN)</span>
+                <span :class="['font-mono font-bold text-xs', totalComprobado > totalGeneralPresupuesto ? 'text-red-500' : 'text-emerald-400']">
+                    {{ formatoMoneda(totalGeneralPresupuesto - totalComprobado) }}
                 </span>
             </div>
-        </div>
-
-        <div v-if="saldoConciliacion > 0 && totalComprobado > 0" class="bg-emerald-950/80 border border-emerald-800 p-4 rounded-xl text-center space-y-1">
-            <h4 class="text-xs font-bold text-emerald-400">💰 AVISO DE SALDO A FAVOR</h4>
-            <p class="text-xs text-neutral-200">
-                HAy UN SALDO A FAVOR DE <span class="font-mono font-bold text-emerald-300">{{ formatoMoneda(saldoConciliacion) }}</span> EN EL PRESUPUESTO. 
-                CORRESPONDE A UN SALDO FAVORABLE DE LA EMPRESA O DEVOLUCIÓN DEL {{ formData.tipoPerfil === 'INTERNO' ? 'EMPLEADO' : 'PROVEEDOR EXTERNO' }}.
-            </p>
-        </div>
-
-        <div v-if="saldoConciliacion < 0" class="bg-red-950/80 border border-red-800 p-4 rounded-xl text-center space-y-1">
-            <h4 class="text-xs font-bold text-red-400">⚠️ ALERTA DE CONCILIACIÓN - EXCESO DE GASTO</h4>
-            <p class="text-xs text-neutral-200">
-                FALTA LA CANTIDAD DE <span class="font-mono font-bold text-red-300">{{ formatoMoneda(Math.abs(saldoConciliacion)) }}</span> Y NO CUADRA CON EL PRESUPUESTO ORIGINAL.
-            </p>
-        </div>
-
-        <div v-if="saldoConciliacion === 0 && totalComprobado > 0" class="bg-blue-950/80 border border-blue-800 p-4 rounded-xl text-center space-y-1">
-            <h4 class="text-xs font-bold text-blue-400">✓ COMPROBACIÓN EXACTA</h4>
-            <p class="text-xs text-neutral-200">EL PRESUPUESTO HA QUEDADO EN CEROS ($0.00) Y CUADRA PERFECTAMENTE CON EL MONTO ASIGNADO.</p>
         </div>
 
         <div class="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
@@ -443,28 +392,6 @@
                         </tr>
                     </tbody>
                 </table>
-            </div>
-
-            <div class="p-4 bg-neutral-950 border-t border-neutral-800 flex justify-between items-center text-xs">
-                <span class="text-neutral-400 font-bold">TOTAL COMPROBADO HASTA AHORA:</span>
-                <span class="font-mono font-bold text-amber-400 text-base">{{ formatoMoneda(totalComprobado) }}</span>
-            </div>
-        </div>
-
-        <div class="bg-neutral-900 border border-neutral-800 p-4 rounded-xl flex justify-between items-center flex-wrap gap-3">
-            <div class="text-xs text-neutral-300">
-                <span>ESTADO DE CONCILIACIÓN: </span>
-                <span :class="['font-bold', estadoConciliacionTexto === 'CONCILIADO EXACTO' ? 'text-emerald-400' : estadoConciliacionTexto === 'SALDO A FAVOR' ? 'text-blue-400' : 'text-red-400']">
-                    {{ estadoConciliacionTexto }}
-                </span>
-            </div>
-            <div class="flex gap-3">
-                <button @click="aceptarConciliacion" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-2">
-                    <span>✓</span> ACEPTAR CONCILIACIÓN
-                </button>
-                <button @click="cancelarConciliacion" class="bg-red-800 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-2">
-                    <span>✕</span> CANCELAR CONCILIACIÓN
-                </button>
             </div>
         </div>
     </main>
@@ -708,14 +635,6 @@
                             <input type="number" v-model.number="catalogos.tarifas.alimentosEdomex" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-neutral-300 mb-1">ALIMENTOS PERSONAL EXTERNO (CUOTA / DÍA EN PESOS)</label>
-                            <input type="number" v-model.number="catalogos.tarifas.alimentosPersonalExterno" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-neutral-300 mb-1">ALIMENTOS CUOTAS ESPECIALES (CUOTA / DÍA EN PESOS)</label>
-                            <input type="number" v-model.number="catalogos.tarifas.alimentosCuotasEspeciales" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
-                        </div>
-                        <div>
                             <label class="block text-xs font-semibold text-neutral-300 mb-1">HOSPEDAJE (CUOTA / NOCHE EN PESOS)</label>
                             <input type="number" v-model.number="catalogos.tarifas.hospedaje" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
                         </div>
@@ -879,11 +798,10 @@ createApp({
             extensionCancelada: false,
             menuCancelacionAbierto: null,
             nuevoElementoCatalogo: '',
-            folioBusqueda: '',
             catalogos: {
                 auditores: ['KEILA PALACIOS ANAYA', 'ALFREDO HERNANDEZ', 'MARCOS GARCIA'],
                 dealers: ['TRATON CAMIONES LA HUERTA', 'TRATON DACZA', 'INTERNATIONAL', 'DINAMUR', 'VOLVO BUSES', 'AYCO HUEHUETOCA'],
-                conceptosTransporte: ['AUTOBUS FORANEO', 'AVION', 'TRANSPORTE URBANO', 'COLECTIVO TAXI', 'COLECTIVO PESERA', 'TAXI / UBER / DIDI', 'CASETA PEAJE', 'GASOLINA'],
+                conceptosTransporte: ['AUTOBUS FORANEO', 'TRANSPORTE URBANO', 'TAXI / UBER / DIDI', 'CASETA PEAJE', 'GASOLINA'],
                 todosConceptos: ['AUTOBUS FORANEO', 'TRANSPORTE URBANO', 'TAXI / UBER / DIDI', 'CASETA PEAJE', 'GASOLINA', 'ALIMENTOS FORÁNEOS', 'ALIMENTOS EDO DE MÉXICO', 'HOSPEDAJE', 'OTROS'],
                 correos: ['jefe@sm-enterprise.com.mx', 'gerente@sm-enterprise.com.mx', 'finanzas@sm-enterprise.com.mx'],
                 monedas: ['MXN', 'USD'],
@@ -891,8 +809,6 @@ createApp({
                 tarifas: {
                     alimentosForaneo: 200,
                     alimentosEdomex: 150,
-                    alimentosPersonalExterno: 200,
-                    alimentosCuotasEspeciales: 250,
                     hospedaje: 600
                 }
             },
@@ -922,8 +838,6 @@ createApp({
                     nochesHospedaje: 2,
                     diasForaneo: 3,
                     diasEdomex: 2,
-                    diasPersonalExterno: 0,
-                    diasCuotasEspeciales: 0,
                     clabe: '012180004567891234',
                     montoAlimentos: 900.00,
                     montoHospedaje: 1200.00,
@@ -951,8 +865,6 @@ createApp({
                 nochesHospedaje: 0,
                 diasForaneo: 0,
                 diasEdomex: 0,
-                diasPersonalExterno: 0,
-                diasCuotasEspeciales: 0,
                 clabe: '',
                 montoAlimentos: 0,
                 montoHospedaje: 0,
@@ -986,10 +898,7 @@ createApp({
             return this.formData.tipoPerfil === 'INTERNO' ? 'PRESUPUESTO DE VIÁTICOS / COMPROBACIÓN DETALLADA' : 'COTIZACIÓN DE SERVICIOS Y GASTOS CONTRACTUALES';
         },
         totalDias() {
-            return (Number(this.formData.diasForaneo) || 0) + 
-                   (Number(this.formData.diasEdomex) || 0) + 
-                   (Number(this.formData.diasPersonalExterno) || 0) + 
-                   (Number(this.formData.diasCuotasEspeciales) || 0);
+            return (Number(this.formData.diasForaneo) || 0) + (Number(this.formData.diasEdomex) || 0);
         },
         subtotalTransporte() {
             if (this.formData.cancelado) return 0;
@@ -1016,14 +925,6 @@ createApp({
         totalComprobado() {
             return this.comprobacionItems.reduce((acc, item) => acc + (Number(item.montoReal) || 0), 0);
         },
-        saldoConciliacion() {
-            return this.totalGeneralPresupuesto - this.totalComprobado;
-        },
-        estadoConciliacionTexto() {
-            if (this.saldoConciliacion === 0) return 'CONCILIADO EXACTO';
-            if (this.saldoConciliacion > 0) return 'SALDO A FAVOR';
-            return 'EXCESO NO COMPROBADO';
-        },
         presupuestosFiltrados() {
             return this.repositorioBD.filter(p => {
                 const matchFolio = !this.filtroReporte.folio || p.folio.toLowerCase().includes(this.filtroReporte.folio.toLowerCase());
@@ -1034,17 +935,6 @@ createApp({
         }
     },
     methods: {
-        actualizarDenominacion() {
-            if (this.formData.tipoPerfil === 'EXTERNO') {
-                this.formData.diasForaneo = 0;
-                this.formData.diasEdomex = 0;
-                this.formData.diasCuotasEspeciales = 0;
-            } else if (this.formData.tipoPerfil === 'INTERNO') {
-                this.formData.diasPersonalExterno = 0;
-                this.formData.diasCuotasEspeciales = 0;
-            }
-            this.recalcularMontosPresupuesto();
-        },
         iniciarSesion() {
             this.loginError = '';
             const user = this.dbUsuarios.find(u => u.id === Number(this.loginForm.usuarioId));
@@ -1097,9 +987,7 @@ createApp({
         calcularMontoAlimentos() {
             const foraneos = (Number(this.formData.diasForaneo) || 0) * (Number(this.catalogos.tarifas.alimentosForaneo) || 0);
             const edomex = (Number(this.formData.diasEdomex) || 0) * (Number(this.catalogos.tarifas.alimentosEdomex) || 0);
-            const personalExterno = (Number(this.formData.diasPersonalExterno) || 0) * (Number(this.catalogos.tarifas.alimentosPersonalExterno) || 0);
-            const cuotasEspeciales = (this.formData.tipoPerfil === 'INTERNO') ? 0 : (Number(this.formData.diasCuotasEspeciales) || 0) * (Number(this.catalogos.tarifas.alimentosCuotasEspeciales) || 0);
-            this.formData.montoAlimentos = foraneos + edomex + personalExterno + cuotasEspeciales;
+            this.formData.montoAlimentos = foraneos + edomex;
         },
         recalcularMontosPresupuesto() {
             this.calcularMontoHospedaje();
@@ -1201,8 +1089,6 @@ createApp({
                 nochesHospedaje: 0,
                 diasForaneo: 0,
                 diasEdomex: 0,
-                diasPersonalExterno: 0,
-                diasCuotasEspeciales: 0,
                 clabe: '',
                 montoAlimentos: 0,
                 montoHospedaje: 0,
@@ -1245,8 +1131,6 @@ createApp({
                 "NOCHES": p.nochesHospedaje,
                 "DÍAS FORÁNEO": p.diasForaneo,
                 "DÍAS EDOMEX": p.diasEdomex,
-                "DÍAS PERS. EXTERNO": p.diasPersonalExterno,
-                "DÍAS CUOTAS ESP.": p.diasCuotasEspeciales,
                 "ALIMENTOS": p.montoAlimentos,
                 "HOSPEDAJE": p.montoHospedaje,
                 "TOTAL BASE": p.montoTotal,
@@ -1265,27 +1149,6 @@ createApp({
             this.extensionItems = JSON.parse(JSON.stringify(p.extensionItems || []));
             this.extensionData = JSON.parse(JSON.stringify(p.extensionData || { jefeEmail: '', gerenteEmail: '', archivoAutorizacion: null, archivoUrl: null }));
             this.activeTab = 'presupuesto';
-        },
-        buscarYConciliarFolio() {
-            if (!this.folioBusqueda) return;
-            const presupuestoEncontrado = this.repositorioBD.find(p => p.folio === this.folioBusqueda);
-            if (presupuestoEncontrado) {
-                this.cargarPresupuestoParaVer(presupuestoEncontrado);
-                this.activeTab = 'comprobacion';
-                alert(`FOLIO ${this.folioBusqueda} ENCONTRADO Y CARGADO PARA COMPROBACIÓN.`);
-            } else {
-                alert(`EL FOLIO ${this.folioBusqueda} NO SE ENCUENTRA REGISTRADO EN LA BASE DE DATOS.`);
-            }
-        },
-        aceptarConciliacion() {
-            this.guardarPresupuestoEnBD();
-            alert(`CONCILIACIÓN DEL FOLIO ${this.formData.folio} ACEPTADA Y GUARDADA SATISFACTORIAMENTE.`);
-        },
-        cancelarConciliacion() {
-            if (confirm(`¿DESEA CANCELAR LA CONCILIACIÓN DEL FOLIO ${this.formData.folio}? LOS GASTOS COMPROBADOS SE REINICIARÁN.`)) {
-                this.comprobacionItems = [];
-                alert('CONCILIACIÓN CANCELADA.');
-            }
         },
         toggleMenuCancelacion(folio) {
             this.menuCancelacionAbierto = this.menuCancelacionAbierto === folio ? null : folio;

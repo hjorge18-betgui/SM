@@ -4,15 +4,20 @@
     <meta charset="UTF-8">
     <meta name="VIEWPORT" content="width=device-width, initial-scale=1.0">
     <title>SISTEMA DE GESTIÓN DE VIÁTICOS Y GASTOS</title>
+    <!-- TAILWIND CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- VUE 3 CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- LUCIDE ICONS -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SHEETJS (XLSX) PARA EXPORTAR A EXCEL -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-black text-gray-100 font-sans antialiased uppercase">
 
 <div id="app" class="min-h-screen flex flex-col max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4">
 
+    <!-- MODAL DE INICIO DE SESIÓN / AUTENTICACIÓN -->
     <div v-if="!sesionIniciada" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-neutral-900 border border-neutral-800 p-6 sm:p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
             <div class="text-center space-y-1">
@@ -45,6 +50,7 @@
         </div>
     </div>
 
+    <!-- MODAL FORZADO: CAMBIO DE CONTRASEÑA OBLIGATORIO -->
     <div v-if="requiereCambioPassword" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-neutral-900 border border-amber-500/50 p-6 sm:p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
             <div class="text-center space-y-1">
@@ -74,6 +80,7 @@
         </div>
     </div>
 
+    <!-- HEADER APP -->
     <header class="bg-neutral-900 border border-neutral-800 text-white p-4 rounded-xl shadow-lg mb-4 flex justify-between items-center flex-wrap gap-2">
         <div>
             <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
@@ -108,6 +115,7 @@
         </div>
     </header>
 
+    <!-- NAVEGACIÓN POR PESTAÑAS -->
     <nav class="flex border-b border-neutral-800 mb-4 bg-neutral-900 rounded-t-xl overflow-hidden flex-wrap">
         <button @click="activeTab = 'presupuesto'" 
                 :class="['flex-1 py-3 px-3 text-center font-medium text-xs transition-colors border-b-2 min-w-[150px]', 
@@ -136,6 +144,7 @@
         </button>
     </nav>
 
+    <!-- PESTAÑA 1: PRESUPUESTO / COTIZACIÓN -->
     <main v-if="activeTab === 'presupuesto'" class="space-y-6">
         <div :class="['p-3 rounded-lg text-xs flex items-center gap-2 border', formData.tipoPerfil === 'INTERNO' ? 'bg-neutral-900 text-blue-400 border-blue-900' : 'bg-neutral-900 text-emerald-400 border-emerald-900']">
             <span class="font-bold">AVISO LEGAL:</span>
@@ -174,22 +183,13 @@
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">NOCHES DE HOSPEDAJE</label>
                 <input type="number" v-model.number="formData.nochesHospedaje" @input="calcularMontoHospedaje" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
             </div>
-
-            <div v-if="formData.tipoPerfil === 'INTERNO'">
+            <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS POR AUDITAR FORÁNEO</label>
-                <input type="number" v-model.number="formData.diasForaneo" @input="calcularMontoAlimentos" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
+                <input type="number" v-model.number="formData.diasForaneo" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
             </div>
-            <div v-if="formData.tipoPerfil === 'INTERNO'">
+            <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS POR AUDITAR ESTADO DE MÉXICO</label>
-                <input type="number" v-model.number="formData.diasEdomex" @input="calcularMontoAlimentos" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
-            </div>
-            <div v-if="formData.tipoPerfil === 'EXTERNO'">
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS PERSONAL EXTERNO</label>
-                <input type="number" v-model.number="formData.diasPersonalExterno" @input="calcularMontoAlimentos" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
-            </div>
-            <div v-if="formData.tipoPerfil !== 'INTERNO'">
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">DÍAS CUOTAS ESPECIALES</label>
-                <input type="number" v-model.number="formData.diasCuotasEspeciales" @input="calcularMontoAlimentos" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
+                <input type="number" v-model.number="formData.diasEdomex" :disabled="!puedeEscribir" min="0" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
             </div>
             <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">TOTAL DE DÍAS</label>
@@ -205,7 +205,7 @@
                 <input type="number" v-model.number="formData.montoAlimentos" :disabled="!puedeEscribir || formData.cancelado" min="0" step="0.01" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono disabled:opacity-50">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">PRESUPUESTO HOSPEDAJE ({{ formData.moneda }}) <span class="text-[10px] text-amber-500 font-normal">(TOPADO A {{ formatoMoneda(catalogos.tarifas.hospedaje) }}/NOCHE)</span></label>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1">PRESUPUESTO HOSPEDAJE ({{ formData.moneda }}) <span class="text-[10px] text-amber-500 font-normal">(TOPADO A $600/NOCHE)</span></label>
                 <input type="number" v-model.number="formData.montoHospedaje" readonly class="w-full bg-neutral-800 border border-neutral-700 text-amber-500 rounded-lg p-2 text-xs font-mono font-bold">
             </div>
         </div>
@@ -327,60 +327,19 @@
         </div>
     </main>
 
+    <!-- PESTAÑA 2: COMPROBACIÓN DE GASTOS -->
     <main v-if="activeTab === 'comprobacion'" class="space-y-6">
-        <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">NOMBRE DEL AUDITOR</label>
-                <select v-model="formData.auditor" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
-                    <option value="">-- SELECCIONAR AUDITOR --</option>
-                    <option v-for="aud in catalogos.auditores" :key="aud" :value="aud">{{ aud }}</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">FOLIO AUTOGENERADO DE PRESUPUESTO</label>
-                <div class="flex gap-2">
-                    <select v-model="folioBusqueda" @change="buscarYConciliarFolio" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold rounded-lg p-2.5 text-xs font-mono focus:ring-2 focus:ring-amber-500">
-                        <option value="">-- SELECCIONAR O BUSCAR FOLIO --</option>
-                        <option v-for="p in repositorioBD" :key="p.folio" :value="p.folio">{{ p.folio }} - {{ p.auditor }} ({{ formatoMonedaEspecifica(p.montoTotal, p.moneda) }})</option>
-                    </select>
-                    <button @click="buscarYConciliarFolio" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 rounded-lg text-xs transition">
-                        BUSCAR
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <div class="bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center flex-wrap gap-2">
             <div>
                 <h3 class="font-bold text-neutral-200 text-xs">EJECUCIÓN PRESUPUESTAL Y COMPROBACIÓN REAL POR DÍA</h3>
-                <p class="text-[10px] text-neutral-400">FOLIO CONSULTADO: <span class="text-amber-400 font-mono font-bold">{{ formData.folio || 'N/A' }}</span> | PRESUPUESTO BASE MONTO: <span class="text-white font-mono font-bold">{{ formatoMoneda(totalGeneralPresupuesto) }}</span></p>
+                <p class="text-[10px] text-neutral-400">REGISTRA TUS GASTOS REALES CON NÚMERO DE FACTURA/NOTA Y CARGA COMPROBANTES FISCALES.</p>
             </div>
             <div class="text-right">
-                <span class="text-[10px] text-neutral-400 block">SALDO RESTANTE EN TIEMPO REAL</span>
-                <span :class="['font-mono font-bold text-sm', saldoConciliacion < 0 ? 'text-red-500' : saldoConciliacion > 0 ? 'text-emerald-400' : 'text-blue-400']">
-                    {{ formatoMoneda(saldoConciliacion) }}
+                <span class="text-[10px] text-neutral-400 block">SALDO FINAL (VARIACIÓN)</span>
+                <span :class="['font-mono font-bold text-xs', totalComprobado > totalGeneralPresupuesto ? 'text-red-500' : 'text-emerald-400']">
+                    {{ formatoMoneda(totalGeneralPresupuesto - totalComprobado) }}
                 </span>
             </div>
-        </div>
-
-        <div v-if="saldoConciliacion > 0 && totalComprobado > 0" class="bg-emerald-950/80 border border-emerald-800 p-4 rounded-xl text-center space-y-1">
-            <h4 class="text-xs font-bold text-emerald-400">💰 AVISO DE SALDO A FAVOR</h4>
-            <p class="text-xs text-neutral-200">
-                HAy UN SALDO A FAVOR DE <span class="font-mono font-bold text-emerald-300">{{ formatoMoneda(saldoConciliacion) }}</span> EN EL PRESUPUESTO. 
-                CORRESPONDE A UN SALDO FAVORABLE DE LA EMPRESA O DEVOLUCIÓN DEL {{ formData.tipoPerfil === 'INTERNO' ? 'EMPLEADO' : 'PROVEEDOR EXTERNO' }}.
-            </p>
-        </div>
-
-        <div v-if="saldoConciliacion < 0" class="bg-red-950/80 border border-red-800 p-4 rounded-xl text-center space-y-1">
-            <h4 class="text-xs font-bold text-red-400">⚠️ ALERTA DE CONCILIACIÓN - EXCESO DE GASTO</h4>
-            <p class="text-xs text-neutral-200">
-                FALTA LA CANTIDAD DE <span class="font-mono font-bold text-red-300">{{ formatoMoneda(Math.abs(saldoConciliacion)) }}</span> Y NO CUADRA CON EL PRESUPUESTO ORIGINAL.
-            </p>
-        </div>
-
-        <div v-if="saldoConciliacion === 0 && totalComprobado > 0" class="bg-blue-950/80 border border-blue-800 p-4 rounded-xl text-center space-y-1">
-            <h4 class="text-xs font-bold text-blue-400">✓ COMPROBACIÓN EXACTA</h4>
-            <p class="text-xs text-neutral-200">EL PRESUPUESTO HA QUEDADO EN CEROS ($0.00) Y CUADRA PERFECTAMENTE CON EL MONTO ASIGNADO.</p>
         </div>
 
         <div class="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
@@ -444,53 +403,17 @@
                     </tbody>
                 </table>
             </div>
-
-            <div class="p-4 bg-neutral-950 border-t border-neutral-800 flex justify-between items-center text-xs">
-                <span class="text-neutral-400 font-bold">TOTAL COMPROBADO HASTA AHORA:</span>
-                <span class="font-mono font-bold text-amber-400 text-base">{{ formatoMoneda(totalComprobado) }}</span>
-            </div>
-        </div>
-
-        <div class="bg-neutral-900 border border-neutral-800 p-4 rounded-xl flex justify-between items-center flex-wrap gap-3">
-            <div class="text-xs text-neutral-300">
-                <span>ESTADO DE CONCILIACIÓN: </span>
-                <span :class="['font-bold', estadoConciliacionTexto === 'CONCILIADO EXACTO' ? 'text-emerald-400' : estadoConciliacionTexto === 'SALDO A FAVOR' ? 'text-blue-400' : 'text-red-400']">
-                    {{ estadoConciliacionTexto }}
-                </span>
-            </div>
-            <div class="flex gap-3">
-                <button @click="aceptarConciliacion" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-2">
-                    <span>✓</span> ACEPTAR CONCILIACIÓN
-                </button>
-                <button @click="cancelarConciliacion" class="bg-red-800 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-2">
-                    <span>✕</span> CANCELAR CONCILIACIÓN
-                </button>
-            </div>
         </div>
     </main>
 
+    <!-- PESTAÑA 3: EXTENSIÓN DE PRESUPUESTO -->
     <main v-if="activeTab === 'extension'" class="space-y-6">
         <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 space-y-4">
             <div class="flex justify-between items-center border-b border-neutral-800 pb-2">
                 <h3 class="font-bold text-neutral-200 text-xs">SOLICITUD Y REGISTRO DE EXTENSIÓN DE GASTOS</h3>
-                
-                <div class="flex items-center gap-2">
-                    <span :class="['px-2.5 py-1 rounded text-[10px] font-bold tracking-wider', 
-                                   formData.estatusExtension === 'RECHAZADA' || extensionCancelada ? 'bg-red-950 text-red-400 border border-red-800' : 
-                                   formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada ? 'bg-emerald-900 text-emerald-300 border border-emerald-700' : 
-                                   'bg-amber-950 text-amber-300 border border-amber-800']">
-                        ESTATUS: {{ formData.estatusExtension || (extensionCancelada ? 'RECHAZADA' : extensionAutorizada ? 'AUTORIZADO' : 'PENDIENTE DE AUTORIZACIÓN') }}
-                    </span>
-
-                    <div v-if="puedeEscribir" class="flex items-center gap-1 ml-2">
-                        <button @click="autorizarExtensionDirecta" class="bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded transition">
-                            ✓ AUTORIZAR
-                        </button>
-                        <button @click="rechazarExtensionDirecta" class="bg-red-800 hover:bg-red-700 text-white text-[10px] font-bold px-2 py-1 rounded transition">
-                            ✕ RECHAZAR
-                        </button>
-                    </div>
-                </div>
+                <span :class="['px-2 py-0.5 rounded text-[10px] font-bold', extensionCancelada ? 'bg-red-950 text-red-400 border border-red-800' : extensionAutorizada ? 'bg-emerald-900 text-emerald-300' : 'bg-amber-900 text-amber-300']">
+                    {{ extensionCancelada ? 'EXTENSIÓN CANCELADA' : extensionAutorizada ? 'AUTORIZADO' : 'PENDIENTE DE AUTORIZACIÓN' }}
+                </span>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -528,20 +451,20 @@
             <div class="p-4 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center">
                 <h3 class="font-bold text-neutral-200 text-xs">REGISTRO DE GASTOS DE EXTENSIÓN</h3>
                 <button v-if="puedeEscribir && !extensionCancelada" @click="agregarFilaExtension" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
-                    + AGREGAR EXTENSIÓN DE GASTO
+                    + AGREGAR CONCEPTO EXCEDENTE
                 </button>
             </div>
-
+            
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-neutral-950 text-neutral-400 uppercase tracking-wider border-b border-neutral-800">
                             <th class="p-2">NO.</th>
-                            <th class="p-2">DEALER</th>
+                            <th class="p-2">DEALER / CLIENTE</th>
                             <th class="p-2">FECHA</th>
                             <th class="p-2">CONCEPTO</th>
-                            <th class="p-2">JUSTIFICACIÓN DE EXTENSIÓN</th>
-                            <th class="p-2">MONTO ({{ formData.moneda }})</th>
+                            <th class="p-2">JUSTIFICACIÓN EXCEDENTE</th>
+                            <th class="p-2">MONTO ADICIONAL ({{ formData.moneda }})</th>
                             <th class="p-2">ACCIÓN</th>
                         </tr>
                     </thead>
@@ -557,12 +480,12 @@
                                 <input type="date" v-model="item.fecha" :disabled="!puedeEscribir || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-28 disabled:opacity-50">
                             </td>
                             <td class="p-2">
-                                <select v-model="item.concepto" :disabled="!puedeEscribir || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-32 disabled:opacity-50">
+                                <select v-model="item.concepto" :disabled="!puedeEscribir || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-36 disabled:opacity-50">
                                     <option v-for="c in catalogos.todosConceptos" :key="c" :value="c">{{ c }}</option>
                                 </select>
                             </td>
                             <td class="p-2">
-                                <input type="text" spellcheck="true" lang="es" v-model="item.justificacion" :disabled="!puedeEscribir || extensionCancelada" placeholder="RAZÓN DE EXTENSIÓN" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-48 uppercase disabled:opacity-50">
+                                <input type="text" spellcheck="true" lang="es" v-model="item.justificacion" :disabled="!puedeEscribir || extensionCancelada" placeholder="MOTIVO DEL CAMBIO" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-48 uppercase disabled:opacity-50">
                             </td>
                             <td class="p-2">
                                 <input type="number" v-model.number="item.monto" :disabled="!puedeEscribir || extensionCancelada" min="0" step="0.01" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-24 font-mono disabled:opacity-50">
@@ -582,6 +505,7 @@
         </div>
     </main>
 
+    <!-- PESTAÑA 4: ADMINISTRACIÓN DE CATÁLOGOS & BD -->
     <main v-if="activeTab === 'admin'" class="space-y-6">
         <div v-if="!esAdmin" class="bg-red-950 border border-red-800 p-6 rounded-xl text-center space-y-2">
             <h3 class="text-red-400 font-bold text-sm">⛔ ACCESO RESTRINGIDO</h3>
@@ -594,40 +518,43 @@
                     <h3 class="font-bold text-neutral-200 text-xs flex items-center gap-2">
                         <span>🗄️</span> CONFIGURACIÓN Y RUTA DE BASE DE DATOS EN LA NUBE
                     </h3>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">CONECTADO</span>
+                    <span :class="['px-2 py-0.5 rounded text-[10px] font-bold', statusBd === 'CONECTADO' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300']">
+                        {{ statusBd }}
+                    </span>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-neutral-400 mb-1">MOTOR DE BASE DE DATOS</label>
-                        <select v-model="configBd.tipo" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold text-xs rounded-lg p-2 focus:ring-2 focus:ring-amber-500">
-                            <option value="SQL_SERVER">AZURE SQL DATABASE / MICROSOFT SQL</option>
-                            <option value="FIREBASE">GOOGLE FIREBASE / FIRESTORE</option>
-                            <option value="EXCEL_ONLINE">MICROSOFT SHAREPOINT / EXCEL BI ONLINE</option>
+                        <label class="block text-xs font-semibold text-neutral-400 mb-1">MOTOR BASE DE DATOS / BI</label>
+                        <select v-model="configBd.tipo" class="w-full bg-black border border-neutral-700 text-amber-400 rounded-lg p-2 text-xs font-mono">
+                            <option value="SQL_SERVER">SQL SERVER / AZURE SQL BI (CLOUD)</option>
+                            <option value="POSTGRESQL">POSTGRESQL / MYSQL (CLOUD SQL)</option>
+                            <option value="EXCEL_365">EXCEL 365 / GOOGLE SHEETS API</option>
                         </select>
                     </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-neutral-400 mb-1">CADENA DE CONEXIÓN / ENDPOINT</label>
-                        <input type="text" v-model="configBd.endpoint" class="w-full bg-black border border-neutral-700 text-white font-mono text-xs rounded-lg p-2 focus:ring-2 focus:ring-amber-500">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-neutral-400 mb-1">RUTA / STRING DE CONEXIÓN A BD EN LA NUBE</label>
+                        <input type="text" v-model="configBd.endpoint" placeholder="Server=tcp:sm-cloud.database.windows.net;Database=ViaticosDB;User ID=admin;..." class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono">
                     </div>
-
                     <div>
-                        <label class="block text-xs font-semibold text-neutral-400 mb-1">CLAVE DE ACCESO / API KEY</label>
-                        <input type="password" v-model="configBd.apiKey" class="w-full bg-black border border-neutral-700 text-white font-mono text-xs rounded-lg p-2 focus:ring-2 focus:ring-amber-500">
+                        <label class="block text-xs font-semibold text-neutral-400 mb-1">CLAVE API / ACCESS TOKEN</label>
+                        <input type="password" v-model="configBd.apiKey" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-neutral-400 mb-1">TABLA / HOJA DESTINO</label>
+                        <input type="text" v-model="configBd.tabla" placeholder="tbl_presupuestos_viaticos" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs font-mono">
+                    </div>
+                    <div class="flex items-end">
+                        <button @click="probarConexion" class="w-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-white font-bold p-2 rounded-lg text-xs transition">
+                            🔌 PROBAR CONEXIÓN
+                        </button>
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center pt-2 flex-wrap gap-2">
-                    <button @click="probarConexionBD" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition">
-                        ⚡ PROBAR Y GUARDAR CONEXIÓN DE BD
-                    </button>
-                    <span class="text-[10px] text-neutral-400">ESTRUCTURA DE TABLAS AUTO-SINCRONIZADA CON REPORTEADOR.</span>
-                </div>
-
-                <div class="bg-black p-3 rounded-lg border border-neutral-800">
-                    <p class="text-[10px] text-neutral-400 font-bold mb-1">ESQUEMA DE TABLAS MAPPED EN NUBE:</p>
-                    <pre class="text-[10px] text-emerald-400 font-mono overflow-x-auto">
+                <div class="bg-black border border-neutral-800 p-4 rounded-lg space-y-2">
+                    <h4 class="text-xs font-bold text-amber-500">ESTRUCTURA Y ESQUEMA DE LAS BASES DE DATOS REGISTRADAS:</h4>
+                    <p class="text-[11px] text-neutral-400">SI UTILIZAS SQL O EXCEL, LAS TABLAS/HOJAS AUTOMÁTICAS DEBEN CONTENER LOS SIGUIENTES CAMPOS:</p>
+                    <pre class="bg-neutral-950 p-3 rounded text-[10px] font-mono text-emerald-400 overflow-x-auto border border-neutral-800">
 -- TABLA EN SQL: tbl_presupuestos (FOLIO PK, FECHA, AUDITOR, PERFIL, MONEDA, MES, SEMANA, NOCHES, DIAS_FORANEO, DIAS_EDOMEX, CLABE, ALIMENTOS, HOSPEDAJE, TOTAL_BASE, MONTO_EXTENSION, TOTAL_GRAL, ESTATUS_EXTENSION, ESTATUS)
 -- TABLA EN SQL: tbl_presupuesto_detalles (ID PK, FOLIO FK, DEALER, FECHA, CONCEPTO, ORIGEN, DESTINO, MONTO)
 -- HOJA EN EXCEL BI: [Presupuestos_General] y [Detalle_Rutas_Transporte]</pre>
@@ -637,96 +564,53 @@
             <div class="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-4">
                 <div class="flex border-b border-neutral-800 gap-2 overflow-x-auto pb-2">
                     <button @click="subTabAdmin = 'usuarios'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'usuarios' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">USUARIOS & PERMISOS</button>
-                    <button @click="subTabAdmin = 'tarifas'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'tarifas' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">TARIFAS & CONFIGURACIÓN</button>
                     <button @click="subTabAdmin = 'auditores'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'auditores' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">AUDITORES</button>
                     <button @click="subTabAdmin = 'dealers'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'dealers' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">DEALERS / CLIENTES</button>
                     <button @click="subTabAdmin = 'conceptos'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'conceptos' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">CONCEPTOS</button>
-                    <button @click="subTabAdmin = 'correos'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'correos' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">CORREOS AUTORIZADORES</button>
+                    <button @click="subTabAdmin = 'correos'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'correos' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">CORREOS</button>
+                    <button @click="subTabAdmin = 'monedas'" :class="['px-3 py-1.5 rounded-lg font-bold text-xs transition', subTabAdmin === 'monedas' ? 'bg-amber-500 text-black' : 'bg-black text-neutral-400']">MONEDAS</button>
                 </div>
 
                 <div v-if="subTabAdmin === 'usuarios'" class="space-y-4">
-                    <h4 class="font-bold text-xs text-amber-500">CATÁLOGOS DE USUARIOS DE ACCESO AL SISTEMA</h4>
-                    
-                    <div class="bg-black p-3 rounded-lg border border-neutral-800 grid grid-cols-1 md:grid-cols-4 gap-2">
-                        <input type="text" spellcheck="true" lang="es" v-model="nuevoUsuario.nombre" placeholder="NOMBRE COMPLETO" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
-                        <input type="password" v-model="nuevoUsuario.password" placeholder="CONTRASEÑA" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-black p-3 rounded-lg border border-neutral-800">
+                        <input type="text" v-model="nuevoUsuario.nombre" placeholder="NOMBRE COMPLETO" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
+                        <input type="password" v-model="nuevoUsuario.password" placeholder="PASSWORD" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white">
                         <select v-model="nuevoUsuario.permiso" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-amber-400 font-bold">
-                            <option value="FULL ACCESS">FULL ACCESS (ADMINISTRADOR)</option>
-                            <option value="ESCRITURA">ESCRITURA (CREAR / EDITAR)</option>
-                            <option value="LECTURA">LECTURA (SOLO CONSULTAS)</option>
+                            <option value="LECTURA">LECTURA (SOLO VER)</option>
+                            <option value="ESCRITURA">ESCRITURA (CREAR Y COMPROBAR)</option>
+                            <option value="FULL ACCESS">FULL ACCESS (ADMIN TOTAL)</option>
                         </select>
-                        <button @click="guardarUsuario" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 rounded transition">
-                            {{ editandoUsuarioIdx !== null ? 'ACTUALIZAR USUARIO' : '+ DAR DE ALTA USUARIO' }}
+                        <button @click="guardarUsuario" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded p-1.5">
+                            {{ editandoUsuarioIdx !== null ? 'ACTUALIZAR' : '+ ALTA USUARIO' }}
                         </button>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-neutral-950 text-neutral-400 border-b border-neutral-800">
-                                    <th class="p-2">ID</th>
-                                    <th class="p-2">NOMBRE COMPLETO</th>
-                                    <th class="p-2">CONTRASEÑA</th>
-                                    <th class="p-2">NIVEL DE PERMISO</th>
-                                    <th class="p-2">ACCIONES</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-neutral-800">
-                                <tr v-for="(u, idx) in dbUsuarios" :key="u.id" class="hover:bg-neutral-800/50">
-                                    <td class="p-2 font-mono text-neutral-500">{{ u.id }}</td>
-                                    <td class="p-2 font-bold">{{ u.nombre }}</td>
-                                    <td class="p-2 font-mono text-neutral-400">••••••••</td>
-                                    <td class="p-2">
-                                        <span :class="['px-2 py-0.5 rounded text-[10px] font-bold', 
-                                                       u.permiso === 'FULL ACCESS' ? 'bg-purple-950 text-purple-300 border border-purple-800' : 
-                                                       u.permiso === 'ESCRITURA' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 
-                                                       'bg-neutral-800 text-neutral-400']">
-                                            {{ u.permiso }}
-                                        </span>
-                                    </td>
-                                    <td class="p-2 flex gap-2">
-                                        <button @click="editarUsuario(idx)" class="text-amber-500 font-bold hover:underline">EDITAR</button>
-                                        <button v-if="u.id !== usuarioActivo.id" @click="eliminarUsuario(idx)" class="text-red-500 font-bold hover:underline">BAJA</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-neutral-950 text-neutral-400 border-b border-neutral-800">
+                                <th class="p-2">ID</th>
+                                <th class="p-2">USUARIO / NOMBRE</th>
+                                <th class="p-2">PASSWORD</th>
+                                <th class="p-2">TIPO PERMISO</th>
+                                <th class="p-2">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-neutral-800">
+                            <tr v-for="(u, idx) in dbUsuarios" :key="u.id" class="hover:bg-neutral-800/50">
+                                <td class="p-2 font-mono text-neutral-500">{{ u.id }}</td>
+                                <td class="p-2 font-bold">{{ u.nombre }}</td>
+                                <td class="p-2 font-mono text-neutral-400">••••••••</td>
+                                <td class="p-2"><span class="bg-neutral-800 text-amber-400 px-2 py-0.5 rounded font-bold text-[10px]">{{ u.permiso }}</span></td>
+                                <td class="p-2 flex gap-2">
+                                    <button @click="editarUsuario(idx)" class="text-blue-400 font-bold">EDITAR</button>
+                                    <button @click="eliminarUsuario(idx)" class="text-red-500 font-bold">BAJA</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                <div v-if="subTabAdmin === 'tarifas'" class="space-y-4">
-                    <h4 class="font-bold text-xs text-amber-500">MODIFICACIÓN DE TARIFAS Y CUOTAS DIARIAS EN PESOS</h4>
-                    <p class="text-xs text-neutral-400">LOS CAMBIOS REALIZADOS AQUÍ SE REFLEJARÁN DIRECTAMENTE EN EL CÁLCULO Y SUMA TOTAL DE LA PESTAÑA DE PRESUPUESTO.</p>
-
-                    <div class="bg-black p-4 rounded-lg border border-neutral-800 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-neutral-300 mb-1">ALIMENTOS FORÁNEOS (CUOTA / DÍA EN PESOS)</label>
-                            <input type="number" v-model.number="catalogos.tarifas.alimentosForaneo" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-neutral-300 mb-1">ALIMENTOS EDO DE MÉXICO (CUOTA / DÍA EN PESOS)</label>
-                            <input type="number" v-model.number="catalogos.tarifas.alimentosEdomex" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-neutral-300 mb-1">ALIMENTOS PERSONAL EXTERNO (CUOTA / DÍA EN PESOS)</label>
-                            <input type="number" v-model.number="catalogos.tarifas.alimentosPersonalExterno" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-neutral-300 mb-1">ALIMENTOS CUOTAS ESPECIALES (CUOTA / DÍA EN PESOS)</label>
-                            <input type="number" v-model.number="catalogos.tarifas.alimentosCuotasEspeciales" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-neutral-300 mb-1">HOSPEDAJE (CUOTA / NOCHE EN PESOS)</label>
-                            <input type="number" v-model.number="catalogos.tarifas.hospedaje" @input="recalcularMontosPresupuesto" min="0" step="10" class="w-full bg-neutral-900 border border-neutral-700 text-amber-400 font-bold font-mono text-xs rounded p-2 focus:ring-2 focus:ring-amber-500">
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="['auditores', 'dealers', 'conceptos', 'correos'].includes(subTabAdmin)" class="space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h4 class="font-bold text-xs text-amber-500">ADMINISTRACIÓN DE {{ subTabAdmin.toUpperCase() }}</h4>
-                    </div>
-
+                <div v-else class="space-y-4">
                     <div class="flex gap-2 bg-black p-3 rounded-lg border border-neutral-800">
                         <input type="text" spellcheck="true" lang="es" v-model="nuevoElementoCatalogo" placeholder="NUEVO REGISTRO..." class="flex-1 bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
                         <button @click="guardarElementoCatalogo" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 rounded">
@@ -757,6 +641,7 @@
         </div>
     </main>
 
+    <!-- PESTAÑA 5: REPORTEADOR Y CONSULTAS DE BD -->
     <main v-if="activeTab === 'reportes'" class="space-y-6">
         <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 space-y-4">
             <div class="flex justify-between items-center border-b border-neutral-800 pb-2 flex-wrap gap-2">
@@ -764,46 +649,54 @@
                     <span>📊</span> REPORTEADOR Y CONSULTA HISTÓRICA DE PRESUPUESTOS EN LA NUBE
                 </h3>
                 <div class="flex items-center gap-3">
-                    <button @click="descargarTodosLosReportesExcel" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-lg">
-                        <span>📥</span> DESCARGAR REPORTE GENERAL EXCEL (.XLSX)
+                    <!-- BOTÓN DE DESCARGA A EXCEL -->
+                    <button @click="descargarTodosLosReportesExcel" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 shadow-md">
+                        <span>📥</span> DESCARGAR TODOS LOS REPORTES (EXCEL)
                     </button>
-                    <span class="text-[10px] text-amber-500 font-mono font-bold">TOTAL REGISTROS: {{ presupuestosFiltrados.length }}</span>
+                    <span class="text-xs text-neutral-400">PERMISO ACTUAL: <span class="text-amber-400 font-bold">{{ usuarioActivo.permiso }}</span></span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-black p-3 rounded-lg border border-neutral-800">
+            <!-- FILTROS DE BÚSQUEDA -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-black p-3 rounded-lg border border-neutral-800">
                 <div>
                     <label class="block text-[10px] font-semibold text-neutral-400 mb-1">BUSCAR POR FOLIO</label>
-                    <input type="text" v-model="filtroReporte.folio" placeholder="PRES-2026-..." class="w-full bg-neutral-900 border border-neutral-700 text-white rounded p-1.5 text-xs uppercase font-mono">
+                    <input type="text" v-model="filtroReporte.folio" placeholder="PRES-2026-..." class="w-full bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase font-mono">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold text-neutral-400 mb-1">FILTRAR POR AUDITOR</label>
-                    <select v-model="filtroReporte.auditor" class="w-full bg-neutral-900 border border-neutral-700 text-white rounded p-1.5 text-xs">
+                    <label class="block text-[10px] font-semibold text-neutral-400 mb-1">FILTRAR AUDITOR</label>
+                    <select v-model="filtroReporte.auditor" class="w-full bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
                         <option value="">-- TODOS --</option>
-                        <option v-for="aud in catalogos.auditores" :key="aud" :value="aud">{{ aud }}</option>
+                        <option v-for="a in catalogos.auditores" :key="a" :value="a">{{ a }}</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold text-neutral-400 mb-1">FILTRAR POR MES</label>
-                    <select v-model="filtroReporte.mes" class="w-full bg-neutral-900 border border-neutral-700 text-white rounded p-1.5 text-xs">
+                    <label class="block text-[10px] font-semibold text-neutral-400 mb-1">FILTRAR MES</label>
+                    <select v-model="filtroReporte.mes" class="w-full bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
                         <option value="">-- TODOS --</option>
                         <option v-for="m in catalogos.meses" :key="m" :value="m">{{ m }}</option>
                     </select>
                 </div>
+                <div class="flex items-end">
+                    <button @click="consultarReportesBD" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-1.5 rounded text-xs transition">
+                        🔍 EJECUTAR CONSULTA
+                    </button>
+                </div>
             </div>
 
+            <!-- TABLA DE RESULTADOS HISTÓRICOS -->
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
-                        <tr class="bg-neutral-950 text-neutral-400 border-b border-neutral-800 uppercase tracking-wider">
+                        <tr class="bg-neutral-950 text-neutral-400 border-b border-neutral-800 uppercase">
                             <th class="p-2">FOLIO</th>
                             <th class="p-2">FECHA</th>
                             <th class="p-2">AUDITOR</th>
                             <th class="p-2">PERFIL</th>
-                            <th class="p-2">MES / SEMANA</th>
-                            <th class="p-2 text-right">EXTENSIÓN</th>
+                            <th class="p-2">MES / SEM.</th>
+                            <th class="p-2 text-right">EXTENSIÓN AUTORIZADA</th>
                             <th class="p-2 text-right">TOTAL GENERAL</th>
-                            <th class="p-2 text-center">ESTATUS EXT.</th>
+                            <th class="p-2 text-center">ESTATUS BD</th>
                             <th class="p-2 text-center">ACCIONES</th>
                         </tr>
                     </thead>
@@ -815,42 +708,39 @@
                             <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] bg-neutral-800 text-neutral-300 font-bold">{{ p.tipoPerfil }}</span></td>
                             <td class="p-2">{{ p.mesTrabajo }} (SEM {{ p.numeroSemana }})</td>
                             <td class="p-2 font-mono text-right font-bold text-amber-400">
-                                {{ (p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada) && !p.extensionCancelada ? formatoMonedaEspecifica(obtenerMontoExtension(p), p.moneda) : '$0.00 ' + p.moneda }}
+                                {{ p.extensionAutorizada && !p.extensionCancelada ? formatoMonedaEspecifica(obtenerMontoExtension(p), p.moneda) : '$0.00 ' + p.moneda }}
                             </td>
                             <td class="p-2 font-mono text-right font-bold text-white">{{ formatoMonedaEspecifica(p.montoTotal, p.moneda) }}</td>
                             <td class="p-2 text-center">
                                 <span v-if="p.cancelado" class="bg-red-950 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-800">CANCELADO TODO</span>
-                                <span v-else-if="p.extensionCancelada || p.estatusExtension === 'RECHAZADA'" class="bg-amber-950 text-amber-400 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-800">EXT. RECHAZADA</span>
-                                <span v-else-if="p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">EXT. AUTORIZADA</span>
-                                <span v-else class="bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded text-[10px] font-bold border border-neutral-700">PENDIENTE</span>
+                                <span v-else-if="p.extensionCancelada" class="bg-amber-950 text-amber-400 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-800">EXT. CANCELADA</span>
+                                <span v-else class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">ACTIVO</span>
                             </td>
-                            <td class="p-2 text-center flex justify-center gap-2">
-                                <button @click="cargarPresupuestoParaVer(p)" class="bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold px-2 py-1 rounded text-[10px] border border-neutral-700 transition">
-                                    👁️ VER / CARGAR
-                                </button>
+                            <td class="p-2 text-center flex justify-center items-center gap-1.5">
+                                <button @click="cargarPresupuestoParaVer(p)" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2 py-1 rounded text-[10px] font-bold">👁️ VER</button>
+                                <button v-if="puedeEscribir" @click="cargarPresupuestoParaEditar(p)" class="bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-[10px] font-bold">✏️ EDITAR</button>
                                 
-                                <div class="relative inline-block text-left" v-if="esAdmin">
-                                    <button @click="toggleMenuCancelacion(p.folio)" class="bg-red-950/80 hover:bg-red-900 text-red-300 font-bold px-2 py-1 rounded text-[10px] border border-red-800 transition">
-                                        ⚙️ GESTIONAR
+                                <!-- MENÚ DESPLEGABLE DE OPCIONES DE RECHAZO EN ACCIONES -->
+                                <div class="relative" v-if="puedeEscribir && !p.cancelado">
+                                    <button @click="toggleMenuCancelacion(p.folio)" class="bg-red-900/80 hover:bg-red-800 text-white px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-red-700">
+                                        🚫 RECHAZO ▾
                                     </button>
-                                    
-                                    <div v-if="menuCancelacionAbierto === p.folio" class="origin-top-right absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-neutral-900 ring-1 ring-black ring-opacity-5 z-50 border border-neutral-700 divide-y divide-neutral-800">
-                                        <div class="py-1">
-                                            <button @click="cancelarPresupuesto(p)" class="block w-full text-left px-3 py-1.5 text-[10px] text-amber-400 hover:bg-neutral-800 font-bold">
-                                                🚫 RECHAZAR PRESUPUESTO BASE
-                                            </button>
-                                            <button @click="cancelarExtension(p)" class="block w-full text-left px-3 py-1.5 text-[10px] text-amber-300 hover:bg-neutral-800 font-bold">
-                                                🚫 RECHAZAR SOLICITUD EXTENSIÓN
-                                            </button>
-                                        </div>
-                                        <div class="py-1">
-                                            <button @click="cancelarTodo(p)" class="block w-full text-left px-3 py-1.5 text-[10px] text-red-500 hover:bg-neutral-800 font-bold">
-                                                ❌ RECHAZAR TODO EL REGISTRO
-                                            </button>
-                                        </div>
+                                    <div v-if="menuCancelacionAbierto === p.folio" class="absolute right-0 mt-1 w-44 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-50 text-left py-1">
+                                        <button @click="cancelarTodo(p)" class="w-full text-left px-3 py-1.5 text-[10px] font-bold text-red-400 hover:bg-neutral-800 transition">
+                                            ❌ RECHAZO TODO
+                                        </button>
+                                        <button @click="cancelarPresupuesto(p)" class="w-full text-left px-3 py-1.5 text-[10px] font-bold text-amber-400 hover:bg-neutral-800 transition">
+                                            📋 RECHAZO PRESUPUESTO
+                                        </button>
+                                        <button @click="cancelarExtension(p)" class="w-full text-left px-3 py-1.5 text-[10px] font-bold text-blue-400 hover:bg-neutral-800 transition">
+                                            🧩 RECHAZO EXTENSIÓN
+                                        </button>
                                     </div>
                                 </div>
                             </td>
+                        </tr>
+                        <tr v-if="presupuestosFiltrados.length === 0">
+                            <td colspan="9" class="p-4 text-center text-neutral-500 text-xs">NO SE ENCONTRARON REGISTROS CON LOS FILTROS INGRESADOS.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -867,49 +757,49 @@ createApp({
     data() {
         return {
             activeTab: 'presupuesto',
-            subTabAdmin: 'tarifas',
-            sesionIniciada: false,
-            requiereCambioPassword: false,
-            usuarioActivo: { id: null, nombre: '', permiso: '' },
-            loginForm: { usuarioId: '', password: '' },
-            loginError: '',
-            cambioPassForm: { nueva: '', confirmacion: '' },
-            cambioPassError: '',
+            subTabAdmin: 'usuarios',
             extensionAutorizada: false,
             extensionCancelada: false,
             menuCancelacionAbierto: null,
-            nuevoElementoCatalogo: '',
-            folioBusqueda: '',
-            catalogos: {
-                auditores: ['KEILA PALACIOS ANAYA', 'ALFREDO HERNANDEZ', 'MARCOS GARCIA'],
-                dealers: ['TRATON CAMIONES LA HUERTA', 'TRATON DACZA', 'INTERNATIONAL', 'DINAMUR', 'VOLVO BUSES', 'AYCO HUEHUETOCA'],
-                conceptosTransporte: ['AUTOBUS FORANEO', 'AVION', 'TRANSPORTE URBANO', 'COLECTIVO TAXI', 'COLECTIVO PESERA', 'TAXI / UBER / DIDI', 'CASETA PEAJE', 'GASOLINA'],
-                todosConceptos: ['AUTOBUS FORANEO', 'TRANSPORTE URBANO', 'TAXI / UBER / DIDI', 'CASETA PEAJE', 'GASOLINA', 'ALIMENTOS FORÁNEOS', 'ALIMENTOS EDO DE MÉXICO', 'HOSPEDAJE', 'OTROS'],
-                correos: ['jefe@sm-enterprise.com.mx', 'gerente@sm-enterprise.com.mx', 'finanzas@sm-enterprise.com.mx'],
-                monedas: ['MXN', 'USD'],
-                meses: ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'],
-                tarifas: {
-                    alimentosForaneo: 200,
-                    alimentosEdomex: 150,
-                    alimentosPersonalExterno: 200,
-                    alimentosCuotasEspeciales: 250,
-                    hospedaje: 600
-                }
+            statusBd: 'CONECTADO',
+            
+            // ESTADO DE AUTENTICACIÓN
+            sesionIniciada: false,
+            requiereCambioPassword: false,
+            loginForm: {
+                usuarioId: '',
+                password: ''
             },
+            cambioPassForm: {
+                nueva: '',
+                confirmacion: ''
+            },
+            loginError: '',
+            cambioPassError: '',
+
+            usuarioActivo: { id: null, nombre: '', permiso: '' },
             dbUsuarios: [
-                { id: 1, nombre: 'ADMINISTRADOR GENERAL', password: '123', permiso: 'FULL ACCESS' },
+                { id: 1, nombre: 'ALFREDO HERNÁNDEZ', password: '123', permiso: 'FULL ACCESS' },
                 { id: 2, nombre: 'KEILA PALACIOS ANAYA', password: '123', permiso: 'ESCRITURA' },
                 { id: 3, nombre: 'GERENTE REVISION', password: '123', permiso: 'LECTURA' }
             ],
             nuevoUsuario: { nombre: '', password: '', permiso: 'ESCRITURA' },
             editandoUsuarioIdx: null,
+
             configBd: {
                 tipo: 'SQL_SERVER',
                 endpoint: 'Server=tcp:sm-cloud.database.windows.net;Database=ViaticosDB;User ID=admin_viaticos;Password=*****;',
                 apiKey: 'SM_ENTERPRISE_AZURE_KEY_2026',
                 tabla: 'tbl_presupuestos_viaticos'
             },
-            filtroReporte: { folio: '', auditor: '', mes: '' },
+
+            filtroReporte: {
+                folio: '',
+                auditor: '',
+                mes: ''
+            },
+
+            // BASE DE DATOS LOCAL SIMULADA (REPORTEADOR)
             repositorioBD: [
                 {
                     folio: 'PRES-2026-0033',
@@ -922,44 +812,88 @@ createApp({
                     nochesHospedaje: 2,
                     diasForaneo: 3,
                     diasEdomex: 2,
-                    diasPersonalExterno: 0,
-                    diasCuotasEspeciales: 0,
                     clabe: '012180004567891234',
-                    montoAlimentos: 900.00,
+                    montoAlimentos: 1000.00,
                     montoHospedaje: 1200.00,
-                    montoTotal: 4360.00,
+                    montoTotal: 4460.00,
                     extensionAutorizada: true,
                     extensionCancelada: false,
-                    estatusExtension: 'AUTORIZADO',
                     cancelado: false,
                     presupuestoItems: [
                         { dealer: 'TRATON CAMIONES LA HUERTA', fecha: '2026-08-16', concepto: 'AUTOBUS FORANEO', origen: 'CENTRAL NORTE', horaSalida: '23:59', destino: 'ZAMORA', horaLlegada: '06:30', proveedor: 'PRIMERA PLUS', monto: 1345.00 },
-                        { dealer: 'TRATON DACZA', fecha: '2026-08-17', concepto: 'AUTOBUS FORANEO', origen: 'ZAMORA', horaSalida: '14:00', destino: 'MEXICO', horaLlegada: '20:30', proveedor: 'ETN', monto: 915.00 }
+                        { dealer: 'TRATON DACZA', fecha: '2026-08-17', concepto: 'AUTOBUS FORANEO', origen: 'ZAMORA', horaSalida: '16:40', destino: 'MORELIA', horaLlegada: '19:00', proveedor: 'PRIMERA PLUS', monto: 465.00 }
                     ],
                     comprobacionItems: [],
-                    extensionItems: []
+                    extensionItems: [
+                        { dealer: 'TRATON DACZA', fecha: '2026-08-18', concepto: 'TRANSPORTE URBANO', justificacion: 'AMPLIACIÓN DE AUDITORÍA EN PLANTA', monto: 450.00 }
+                    ],
+                    extensionData: {
+                        jefeEmail: 'jefe@sm-enterprise.com.mx',
+                        gerenteEmail: 'gerente@sm-enterprise.com.mx',
+                        archivoAutorizacion: 'AUTORIZACION_KEILA.MSG',
+                        archivoUrl: null
+                    }
+                },
+                {
+                    folio: 'COT-2026-0012',
+                    fechaPresupuesto: '2026-08-10',
+                    auditor: 'ALFREDO HERNÁNDEZ',
+                    tipoPerfil: 'EXTERNO',
+                    moneda: 'MXN',
+                    mesTrabajo: 'AGOSTO',
+                    numeroSemana: 32,
+                    nochesHospedaje: 1,
+                    diasForaneo: 2,
+                    diasEdomex: 0,
+                    clabe: '072180009876543210',
+                    montoAlimentos: 800.00,
+                    montoHospedaje: 600.00,
+                    montoTotal: 5400.00,
+                    extensionAutorizada: false,
+                    extensionCancelada: false,
+                    cancelado: false,
+                    presupuestoItems: [
+                        { dealer: 'CHIREY ASIA LUXURY', fecha: '2026-08-10', concepto: 'KM', origen: 'CDMX', horaSalida: '08:00', destino: 'TOLUCA', horaLlegada: '09:30', proveedor: 'PROPIO', monto: 1000.00 }
+                    ],
+                    comprobacionItems: [],
+                    extensionItems: [],
+                    extensionData: {
+                        jefeEmail: 'jefe@sm-enterprise.com.mx',
+                        gerenteEmail: 'gerente@sm-enterprise.com.mx',
+                        archivoAutorizacion: null,
+                        archivoUrl: null
+                    }
                 }
             ],
+
+            nuevoElementoCatalogo: '',
+            catalogos: {
+                auditores: ['KEILA PALACIOS ANAYA', 'ALFREDO HERNÁNDEZ', 'CARLOS MENDOZA'],
+                dealers: ['TRATON CAMIONES LA HUERTA', 'TRATON DACZA', 'CHIREY ASIA LUXURY'],
+                meses: ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'],
+                conceptosTransporte: ['AVION', 'AUTOBUS FORANEO', 'TAXI UBER-DIDI', 'TRANSPORTE URBANO', 'KM', 'CABLE BUS', 'METRO', 'METRO BUS', 'CASETAS'],
+                todosConceptos: ['AVION', 'AUTOBUS FORANEO', 'TAXI UBER-DIDI', 'TRANSPORTE URBANO', 'KM', 'CABLE BUS', 'METRO', 'METRO BUS', 'CASETAS', 'ALIMENTO', 'HOSPEDAJE'],
+                correos: ['viaticos@sm-enterprise.com.mx', 'jefe@sm-enterprise.com.mx', 'gerente@sm-enterprise.com.mx'],
+                monedas: ['MXN', 'USD', 'EUR']
+            },
+
             formData: {
                 moneda: 'MXN',
                 tipoPerfil: 'INTERNO',
-                folio: 'PRES-2026-0034',
+                folio: '',
                 auditor: '',
-                fechaPresupuesto: new Date().toISOString().split('T')[0],
+                fechaPresupuesto: '',
                 mesTrabajo: 'AGOSTO',
-                numeroSemana: 34,
+                numeroSemana: 33,
                 nochesHospedaje: 0,
                 diasForaneo: 0,
                 diasEdomex: 0,
-                diasPersonalExterno: 0,
-                diasCuotasEspeciales: 0,
                 clabe: '',
                 montoAlimentos: 0,
                 montoHospedaje: 0,
                 honorarios: 0,
                 retenciones: 0,
-                cancelado: false,
-                estatusExtension: 'PENDIENTE'
+                cancelado: false
             },
             extensionData: {
                 jefeEmail: 'jefe@sm-enterprise.com.mx',
@@ -973,60 +907,54 @@ createApp({
         }
     },
     computed: {
-        esAdmin() { return this.usuarioActivo.permiso === 'FULL ACCESS'; },
-        puedeEscribir() { return this.usuarioActivo.permiso === 'ESCRITURA' || this.usuarioActivo.permiso === 'FULL ACCESS'; },
+        esAdmin() {
+            return this.usuarioActivo.permiso === 'FULL ACCESS';
+        },
+        puedeEscribir() {
+            return this.usuarioActivo.permiso === 'ESCRITURA' || this.usuarioActivo.permiso === 'FULL ACCESS';
+        },
         listaCatalogoActivo() {
             if (this.subTabAdmin === 'auditores') return this.catalogos.auditores;
             if (this.subTabAdmin === 'dealers') return this.catalogos.dealers;
             if (this.subTabAdmin === 'conceptos') return this.catalogos.todosConceptos;
             if (this.subTabAdmin === 'correos') return this.catalogos.correos;
+            if (this.subTabAdmin === 'monedas') return this.catalogos.monedas;
             return [];
         },
         tituloDocumento() {
             return this.formData.tipoPerfil === 'INTERNO' ? 'PRESUPUESTO DE VIÁTICOS / COMPROBACIÓN DETALLADA' : 'COTIZACIÓN DE SERVICIOS Y GASTOS CONTRACTUALES';
         },
         totalDias() {
-            return (Number(this.formData.diasForaneo) || 0) + 
-                   (Number(this.formData.diasEdomex) || 0) + 
-                   (Number(this.formData.diasPersonalExterno) || 0) + 
-                   (Number(this.formData.diasCuotasEspeciales) || 0);
+            return (Number(this.formData.diasForaneo) || 0) + (Number(this.formData.diasEdomex) || 0);
         },
         subtotalTransporte() {
             if (this.formData.cancelado) return 0;
             return this.presupuestoItems.reduce((acc, item) => acc + (Number(item.monto) || 0), 0);
         },
         totalExtension() {
-            if (this.extensionCancelada || this.formData.estatusExtension === 'RECHAZADA') return 0;
+            if (this.extensionCancelada) return 0;
             return this.extensionItems.reduce((acc, item) => acc + (Number(item.monto) || 0), 0);
         },
         totalGeneralPresupuesto() {
-            if (this.formData.cancelado) {
-                if ((this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada) {
-                    return this.totalExtension;
-                }
-                return 0;
+            let extensionASumar = (this.extensionAutorizada && !this.extensionCancelada) ? this.totalExtension : 0;
+            let alimentos = this.formData.cancelado ? 0 : (Number(this.formData.montoAlimentos) || 0);
+            let hospedaje = this.formData.cancelado ? 0 : (Number(this.formData.montoHospedaje) || 0);
+            
+            let subtotalOps = this.subtotalTransporte + alimentos + hospedaje + extensionASumar;
+            
+            if (this.formData.tipoPerfil === 'EXTERNO') {
+                let honorarios = this.formData.cancelado ? 0 : (Number(this.formData.honorarios) || 0);
+                let retenciones = this.formData.cancelado ? 0 : (Number(this.formData.retenciones) || 0);
+                return subtotalOps + honorarios - retenciones;
             }
-            const alimentos = Number(this.formData.montoAlimentos) || 0;
-            const hospedaje = Number(this.formData.montoHospedaje) || 0;
-            const honorarios = Number(this.formData.honorarios) || 0;
-            const retenciones = Number(this.formData.retenciones) || 0;
-            const ext = ((this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada) ? this.totalExtension : 0;
-            return this.subtotalTransporte + alimentos + hospedaje + honorarios - retenciones + ext;
+            return subtotalOps;
         },
         totalComprobado() {
             return this.comprobacionItems.reduce((acc, item) => acc + (Number(item.montoReal) || 0), 0);
         },
-        saldoConciliacion() {
-            return this.totalGeneralPresupuesto - this.totalComprobado;
-        },
-        estadoConciliacionTexto() {
-            if (this.saldoConciliacion === 0) return 'CONCILIADO EXACTO';
-            if (this.saldoConciliacion > 0) return 'SALDO A FAVOR';
-            return 'EXCESO NO COMPROBADO';
-        },
         presupuestosFiltrados() {
             return this.repositorioBD.filter(p => {
-                const matchFolio = !this.filtroReporte.folio || p.folio.toLowerCase().includes(this.filtroReporte.folio.toLowerCase());
+                const matchFolio = !this.filtroReporte.folio || p.folio.toUpperCase().includes(this.filtroReporte.folio.toUpperCase());
                 const matchAuditor = !this.filtroReporte.auditor || p.auditor === this.filtroReporte.auditor;
                 const matchMes = !this.filtroReporte.mes || p.mesTrabajo === this.filtroReporte.mes;
                 return matchFolio && matchAuditor && matchMes;
@@ -1034,42 +962,220 @@ createApp({
         }
     },
     methods: {
-        actualizarDenominacion() {
-            if (this.formData.tipoPerfil === 'EXTERNO') {
-                this.formData.diasForaneo = 0;
-                this.formData.diasEdomex = 0;
-                this.formData.diasCuotasEspeciales = 0;
-            } else if (this.formData.tipoPerfil === 'INTERNO') {
-                this.formData.diasPersonalExterno = 0;
-                this.formData.diasCuotasEspeciales = 0;
-            }
-            this.recalcularMontosPresupuesto();
+        toggleMenuCancelacion(folio) {
+            this.menuCancelacionAbierto = this.menuCancelacionAbierto === folio ? null : folio;
         },
-        iniciarSesion() {
-            this.loginError = '';
-            const user = this.dbUsuarios.find(u => u.id === Number(this.loginForm.usuarioId));
-            if (!user) {
-                this.loginError = 'SELECCIONE UN USUARIO VÁLIDO.';
+
+        // LOGICA DE CANCELACIÓN Y DESCUENTO DE SUMAS
+        cancelarTodo(p) {
+            if (confirm(`¿CONFIRMA EL RECHAZO TOTAL DEL REGISTRO FOLIO ${p.folio}? EL PRESUPUESTO BASE Y LA EXTENSIÓN SE DESCONTARÁN A $0.00.`)) {
+                p.cancelado = true;
+                p.extensionCancelada = true;
+                p.montoTotal = 0;
+                
+                if (this.formData.folio === p.folio) {
+                    this.formData.cancelado = true;
+                    this.extensionCancelada = true;
+                }
+                this.menuCancelacionAbierto = null;
+                alert(`EL REGISTRO ${p.folio} HA SIDO RECHAZADO COMPLETAMENTE.`);
+            }
+        },
+        cancelarPresupuesto(p) {
+            if (confirm(`¿CONFIRMA EL RECHAZO ÚNICAMENTE DEL PRESUPUESTO BASE DE ${p.folio}? SE DESCONTARÁN LOS TRANSPORTES, HOSPEDAJE Y ALIMENTOS.`)) {
+                p.cancelado = true;
+                
+                // Recalcular monto total en el registro reteniendo únicamente la extensión si está autorizada
+                let ext = (p.extensionAutorizada && !p.extensionCancelada) ? this.obtenerMontoExtension(p) : 0;
+                p.montoTotal = ext;
+
+                if (this.formData.folio === p.folio) {
+                    this.formData.cancelado = true;
+                }
+                this.menuCancelacionAbierto = null;
+                alert(`EL PRESUPUESTO BASE DE ${p.folio} HA SIDO RECHAZADO. SOLO PERMANECE VIGENTE LA EXTENSIÓN SI APLICA.`);
+            }
+        },
+        cancelarExtension(p) {
+            if (!p.extensionAutorizada && (!p.extensionItems || p.extensionItems.length === 0)) {
+                alert('ESTE REGISTRO NO TIENE UNA EXTENSIÓN ACTIVA PARA CANCELAR O RECHAZAR.');
+                this.menuCancelacionAbierto = null;
                 return;
             }
-            if (this.loginForm.password === user.password) {
-                this.usuarioActivo = { ...user };
-                this.sesionIniciada = true;
-                if (user.password === '123') {
-                    this.requiereCambioPassword = true;
-                } else {
-                    if (this.catalogos.auditores.includes(user.nombre)) {
-                        this.formData.auditor = user.nombre;
-                    }
+            if (confirm(`¿CONFIRMA EL RECHAZO ÚNICAMENTE DE LA EXTENSIÓN DE PRESUPUESTO DE ${p.folio}?`)) {
+                p.extensionCancelada = true;
+                
+                // Recalcular el total reteniendo solo el presupuesto base
+                let base = p.cancelado ? 0 : (p.montoTotal - this.obtenerMontoExtension(p));
+                p.montoTotal = base < 0 ? 0 : base;
+
+                if (this.formData.folio === p.folio) {
+                    this.extensionCancelada = true;
+                }
+                this.menuCancelacionAbierto = null;
+                alert(`LA EXTENSIÓN DE ${p.folio} HA SIDO RECHAZADA Y DESCONTADA DEL TOTAL GLOBAL.`);
+            }
+        },
+
+        // DESCARGAR TODOS LOS REPORTES A EXCEL USANDO SHEETJS
+        descargarTodosLosReportesExcel() {
+            if (this.repositorioBD.length === 0) {
+                alert('NO HAY REPORTES EN LA BASE DE DATOS PARA EXPORTAR.');
+                return;
+            }
+
+            // 1. HOJA PRINCIPAL: RESUMEN GENERAL DE PRESUPUESTOS
+            const dataGeneral = this.repositorioBD.map(p => ({
+                "FOLIO": p.folio,
+                "FECHA PRESUPUESTO": p.fechaPresupuesto,
+                "AUDITOR": p.auditor,
+                "PERFIL LEGAL": p.tipoPerfil,
+                "MONEDA": p.moneda,
+                "MES TRABAJO": p.mesTrabajo,
+                "NO. SEMANA": p.numeroSemana,
+                "NOCHES HOSPEDAJE": p.nochesHospedaje,
+                "DÍAS FORÁNEO": p.diasForaneo,
+                "DÍAS EDOMEX": p.diasEdomex,
+                "CLABE": p.clabe,
+                "MONTO ALIMENTOS": p.montoAlimentos,
+                "MONTO HOSPEDAJE": p.montoHospedaje,
+                "HONORARIOS (EXTERNO)": p.honorarios || 0,
+                "RETENCIONES (EXTERNO)": p.retenciones || 0,
+                "MONTO EXTENSIÓN": this.obtenerMontoExtension(p),
+                "TOTAL GENERAL": p.montoTotal,
+                "ESTATUS BASE": p.cancelado ? "CANCELADO / RECHAZADO" : "ACTIVO",
+                "ESTATUS EXTENSIÓN": p.extensionCancelada ? "RECHAZADA" : p.extensionAutorizada ? "AUTORIZADA" : "PENDIENTE"
+            }));
+
+            // 2. HOJA SECUNDARIA: DETALLE DE RUTAS Y TRANSPORTES (PRESUPUESTO BASE)
+            const dataTransportes = [];
+            this.repositorioBD.forEach(p => {
+                if (p.presupuestoItems && p.presupuestoItems.length > 0) {
+                    p.presupuestoItems.forEach(item => {
+                        dataTransportes.push({
+                            "FOLIO": p.folio,
+                            "AUDITOR": p.auditor,
+                            "DEALER / CLIENTE": item.dealer,
+                            "FECHA": item.fecha,
+                            "CONCEPTO": item.concepto,
+                            "ORIGEN": item.origen,
+                            "HORA SALIDA": item.horaSalida,
+                            "DESTINO": item.destino,
+                            "HORA LLEGADA": item.horaLlegada,
+                            "LÍNEA / PROVEEDOR": item.proveedor,
+                            "MONTO": item.monto
+                        });
+                    });
+                }
+            });
+
+            // 3. HOJA TERCERA: COMPROBACIÓN REAL DE GASTOS
+            const dataComprobacion = [];
+            this.repositorioBD.forEach(p => {
+                if (p.comprobacionItems && p.comprobacionItems.length > 0) {
+                    p.comprobacionItems.forEach(item => {
+                        dataComprobacion.push({
+                            "FOLIO": p.folio,
+                            "AUDITOR": p.auditor,
+                            "DEALER / CLIENTE": item.dealer,
+                            "FECHA": item.fecha,
+                            "CONCEPTO": item.concepto,
+                            "PROVEEDOR FACTURA": item.proveedorFactura,
+                            "NO. FACTURA / NOTA": item.numeroFactura,
+                            "MONTO REAL": item.montoReal,
+                            "COMPROBANTE ADJUNTO": item.archivoNombre || "N/A"
+                        });
+                    });
+                }
+            });
+
+            // 4. HOJA CUARTA: EXTENSIONES DE PRESUPUESTO
+            const dataExtensiones = [];
+            this.repositorioBD.forEach(p => {
+                if (p.extensionItems && p.extensionItems.length > 0) {
+                    p.extensionItems.forEach(item => {
+                        dataExtensiones.push({
+                            "FOLIO": p.folio,
+                            "AUDITOR": p.auditor,
+                            "DEALER / CLIENTE": item.dealer,
+                            "FECHA": item.fecha,
+                            "CONCEPTO": item.concepto,
+                            "JUSTIFICACIÓN": item.justificacion,
+                            "MONTO ADICIONAL": item.monto
+                        });
+                    });
+                }
+            });
+
+            // CREACIÓN DEL LIBRO DE EXCEL
+            const wb = XLSX.utils.book_new();
+
+            const wsGeneral = XLSX.utils.json_to_sheet(dataGeneral);
+            XLSX.utils.book_append_sheet(wb, wsGeneral, "General_Presupuestos");
+
+            if (dataTransportes.length > 0) {
+                const wsTransportes = XLSX.utils.json_to_sheet(dataTransportes);
+                XLSX.utils.book_append_sheet(wb, wsTransportes, "Rutas_Transporte");
+            }
+
+            if (dataComprobacion.length > 0) {
+                const wsComprobacion = XLSX.utils.json_to_sheet(dataComprobacion);
+                XLSX.utils.book_append_sheet(wb, wsComprobacion, "Gastos_Comprobados");
+            }
+
+            if (dataExtensiones.length > 0) {
+                const wsExtensiones = XLSX.utils.json_to_sheet(dataExtensiones);
+                XLSX.utils.book_append_sheet(wb, wsExtensiones, "Extensiones_Detalle");
+            }
+
+            // GENERAR Y DESCARGAR ARCHIVO EXCEL
+            const nombreArchivo = `REPORTE_GENERAL_VIATICO_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, nombreArchivo);
+        },
+
+        cargarUsuariosPersistidos() {
+            const guardados = localStorage.getItem('dbUsuarios_viaticos');
+            if (guardados) {
+                try {
+                    this.dbUsuarios = JSON.parse(guardados);
+                } catch (e) {
+                    console.error('Error al cargar usuarios desde localStorage', e);
                 }
             } else {
-                this.loginError = 'CONTRASEÑA INCORRECTA PARA EL USUARIO.';
+                this.guardarUsuariosPersistidos();
+            }
+        },
+        guardarUsuariosPersistidos() {
+            localStorage.setItem('dbUsuarios_viaticos', JSON.stringify(this.dbUsuarios));
+        },
+
+        iniciarSesion() {
+            this.loginError = '';
+            if (!this.loginForm.usuarioId || !this.loginForm.password) {
+                this.loginError = 'INGRESE USUARIO Y CONTRASEÑA.';
+                return;
+            }
+            const usuarioEncontrado = this.dbUsuarios.find(u => u.id === this.loginForm.usuarioId && u.password === this.loginForm.password);
+            if (usuarioEncontrado) {
+                this.usuarioActivo = usuarioEncontrado;
+                this.sesionIniciada = true;
+
+                if (usuarioEncontrado.password === '123') {
+                    this.requiereCambioPassword = true;
+                    return;
+                }
+                
+                if (this.catalogos.auditores.includes(usuarioEncontrado.nombre)) {
+                    this.formData.auditor = usuarioEncontrado.nombre;
+                }
+            } else {
+                this.loginError = 'CONTRASEÑA INCORRECTA O USUARIO INVÁLIDO.';
             }
         },
         actualizarPasswordForzado() {
             this.cambioPassError = '';
             if (!this.cambioPassForm.nueva || !this.cambioPassForm.confirmacion) {
-                this.cambioPassError = 'LLENE AMBOS CAMPOS DE CONTRASEÑA.';
+                this.cambioPassError = 'POR FAVOR LLENE AMBOS CAMPOS DE CONTRASEÑA.';
                 return;
             }
             if (this.cambioPassForm.nueva !== this.cambioPassForm.confirmacion) {
@@ -1077,139 +1183,64 @@ createApp({
                 return;
             }
             if (this.cambioPassForm.nueva === '123') {
-                this.cambioPassError = 'DEBE INGRESAR UNA CONTRASEÑA DIFERENTE A LA PREDETERMINADA.';
+                this.cambioPassError = 'DEBE INGRESAR UNA CONTRASEÑA DIFERENTE A LA POR DEFECTO.';
                 return;
             }
+
             this.usuarioActivo.password = this.cambioPassForm.nueva;
             const idxBD = this.dbUsuarios.findIndex(u => u.id === this.usuarioActivo.id);
-            if (idxBD >= 0) this.dbUsuarios[idxBD].password = this.cambioPassForm.nueva;
+            if (idxBD >= 0) {
+                this.dbUsuarios[idxBD].password = this.cambioPassForm.nueva;
+                this.guardarUsuariosPersistidos();
+            }
+
             this.requiereCambioPassword = false;
-            alert('CONTRASEÑA ACTUALIZADA SATISFACTORIAMENTE.');
+            this.cambioPassForm = { nueva: '', confirmacion: '' };
+            alert('CONTRASEÑA ACTUALIZADA SATISFACTORIAMENTE. BIENVENIDO AL SISTEMA.');
+
+            if (this.catalogos.auditores.includes(this.usuarioActivo.nombre)) {
+                this.formData.auditor = this.usuarioActivo.nombre;
+            }
         },
         cerrarSesion() {
             this.sesionIniciada = false;
+            this.requiereCambioPassword = false;
             this.usuarioActivo = { id: null, nombre: '', permiso: '' };
             this.loginForm = { usuarioId: '', password: '' };
+            this.loginError = '';
         },
-        calcularMontoHospedaje() {
-            this.formData.montoHospedaje = (Number(this.formData.nochesHospedaje) || 0) * (Number(this.catalogos.tarifas.hospedaje) || 0);
-        },
-        calcularMontoAlimentos() {
-            const foraneos = (Number(this.formData.diasForaneo) || 0) * (Number(this.catalogos.tarifas.alimentosForaneo) || 0);
-            const edomex = (Number(this.formData.diasEdomex) || 0) * (Number(this.catalogos.tarifas.alimentosEdomex) || 0);
-            const personalExterno = (Number(this.formData.diasPersonalExterno) || 0) * (Number(this.catalogos.tarifas.alimentosPersonalExterno) || 0);
-            const cuotasEspeciales = (this.formData.tipoPerfil === 'INTERNO') ? 0 : (Number(this.formData.diasCuotasEspeciales) || 0) * (Number(this.catalogos.tarifas.alimentosCuotasEspeciales) || 0);
-            this.formData.montoAlimentos = foraneos + edomex + personalExterno + cuotasEspeciales;
-        },
-        recalcularMontosPresupuesto() {
-            this.calcularMontoHospedaje();
-            this.calcularMontoAlimentos();
-        },
-        formatoMoneda(val) {
-            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: this.formData.moneda || 'MXN' }).format(val || 0);
-        },
-        formatoMonedaEspecifica(val, mon) {
-            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: mon || 'MXN' }).format(val || 0);
-        },
-        agregarFilaPresupuesto() {
-            this.presupuestoItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'AUTOBUS FORANEO', origen: '', horaSalida: '', destino: '', horaLlegada: '', proveedor: '', monto: 0 });
-        },
-        eliminarFilaPresupuesto(index) { this.presupuestoItems.splice(index, 1); },
-        agregarFilaComprobacion() {
-            this.comprobacionItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'AUTOBUS FORANEO', proveedorFactura: '', numeroFactura: '', montoReal: 0, archivoNombre: null });
-        },
-        eliminarFilaComprobacion(index) { this.comprobacionItems.splice(index, 1); },
-        agregarFilaExtension() {
-            this.extensionItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'TRANSPORTE URBANO', justificacion: '', monto: 0 });
-        },
-        eliminarFilaExtension(index) { this.extensionItems.splice(index, 1); },
-        autorizarExtensionDirecta() {
-            this.extensionAutorizada = true;
-            this.extensionCancelada = false;
-            this.formData.estatusExtension = 'AUTORIZADO';
-            alert('EXTENSIÓN DE PRESUPUESTO AUTORIZADA.');
-        },
-        rechazarExtensionDirecta() {
-            this.extensionAutorizada = false;
-            this.extensionCancelada = true;
-            this.formData.estatusExtension = 'RECHAZADA';
-            alert('EXTENSIÓN DE PRESUPUESTO RECHAZADA.');
-        },
-        guardarUsuario() {
-            if (!this.nuevoUsuario.nombre || !this.nuevoUsuario.password) {
-                alert('LLENE TODOS LOS CAMPOS DEL USUARIO.');
-                return;
-            }
-            if (this.editandoUsuarioIdx !== null) {
-                this.dbUsuarios[this.editandoUsuarioIdx] = { ...this.nuevoUsuario, id: this.dbUsuarios[this.editandoUsuarioIdx].id };
-                this.editandoUsuarioIdx = null;
-            } else {
-                const newId = this.dbUsuarios.length ? Math.max(...this.dbUsuarios.map(u => u.id)) + 1 : 1;
-                this.dbUsuarios.push({ ...this.nuevoUsuario, id: newId });
-            }
-            this.nuevoUsuario = { nombre: '', password: '', permiso: 'ESCRITURA' };
-        },
-        editarUsuario(idx) {
-            this.editandoUsuarioIdx = idx;
-            this.nuevoUsuario = { ...this.dbUsuarios[idx] };
-        },
-        eliminarUsuario(idx) { this.dbUsuarios.splice(idx, 1); },
-        guardarElementoCatalogo() {
-            if (!this.nuevoElementoCatalogo) return;
-            const val = this.nuevoElementoCatalogo.toUpperCase();
-            if (this.subTabAdmin === 'auditores') this.catalogos.auditores.push(val);
-            if (this.subTabAdmin === 'dealers') this.catalogos.dealers.push(val);
-            if (this.subTabAdmin === 'conceptos') this.catalogos.todosConceptos.push(val);
-            if (this.subTabAdmin === 'correos') this.catalogos.correos.push(val.toLowerCase());
-            this.nuevoElementoCatalogo = '';
-        },
-        eliminarElementoCatalogo(idx) {
-            if (this.subTabAdmin === 'auditores') this.catalogos.auditores.splice(idx, 1);
-            if (this.subTabAdmin === 'dealers') this.catalogos.dealers.splice(idx, 1);
-            if (this.subTabAdmin === 'conceptos') this.catalogos.todosConceptos.splice(idx, 1);
-            if (this.subTabAdmin === 'correos') this.catalogos.correos.splice(idx, 1);
-        },
-        probarConexionBD() {
-            alert(`CONEXIÓN CON BD NUBE ESTABLECIDA.\nMOTOR: ${this.configBd.tipo}\nENDPOINT: ${this.configBd.endpoint}`);
-        },
-        guardarPresupuestoEnBD() {
-            const index = this.repositorioBD.findIndex(p => p.folio === this.formData.folio);
-            const registro = {
-                ...JSON.parse(JSON.stringify(this.formData)),
-                montoTotal: this.totalGeneralPresupuesto,
-                extensionAutorizada: this.extensionAutorizada,
-                extensionCancelada: this.extensionCancelada,
-                presupuestoItems: JSON.parse(JSON.stringify(this.presupuestoItems)),
-                comprobacionItems: JSON.parse(JSON.stringify(this.comprobacionItems)),
-                extensionItems: JSON.parse(JSON.stringify(this.extensionItems)),
-                extensionData: JSON.parse(JSON.stringify(this.extensionData))
-            };
-            if (index >= 0) this.repositorioBD[index] = registro;
-            else this.repositorioBD.push(registro);
-            alert(`PRESUPUESTO ${this.formData.folio} GUARDADO EN LA BASE DE DATOS.`);
+        generarNuevoFolio() {
+            const prefijo = this.formData.tipoPerfil === 'EXTERNO' ? 'COT' : 'PRES';
+            const consecutivo = Math.floor(1000 + Math.random() * 9000);
+            return `${prefijo}-2026-${consecutivo}`;
         },
         nuevoPresupuesto() {
-            const consecutivo = Math.floor(1000 + Math.random() * 9000);
+            const hoy = new Date().toISOString().split('T')[0];
+            const esAuditor = this.catalogos.auditores.includes(this.usuarioActivo.nombre);
+            
             this.formData = {
                 moneda: 'MXN',
                 tipoPerfil: 'INTERNO',
-                folio: `PRES-2026-${consecutivo}`,
-                auditor: this.usuarioActivo.nombre || '',
-                fechaPresupuesto: new Date().toISOString().split('T')[0],
+                folio: this.generarNuevoFolio(),
+                auditor: esAuditor ? this.usuarioActivo.nombre : '',
+                fechaPresupuesto: hoy,
                 mesTrabajo: 'AGOSTO',
-                numeroSemana: 34,
+                numeroSemana: 33,
                 nochesHospedaje: 0,
                 diasForaneo: 0,
                 diasEdomex: 0,
-                diasPersonalExterno: 0,
-                diasCuotasEspeciales: 0,
                 clabe: '',
                 montoAlimentos: 0,
                 montoHospedaje: 0,
                 honorarios: 0,
                 retenciones: 0,
-                cancelado: false,
-                estatusExtension: 'PENDIENTE'
+                cancelado: false
+            };
+            this.extensionData = {
+                jefeEmail: 'jefe@sm-enterprise.com.mx',
+                gerenteEmail: 'gerente@sm-enterprise.com.mx',
+                archivoAutorizacion: null,
+                archivoUrl: null
             };
             this.presupuestoItems = [];
             this.comprobacionItems = [];
@@ -1217,10 +1248,51 @@ createApp({
             this.extensionAutorizada = false;
             this.extensionCancelada = false;
         },
+
+        formatoMoneda(valor) {
+            const simbolo = this.formData.moneda === 'EUR' ? '€' : '$';
+            return `${simbolo}${Number(valor || 0).toFixed(2)} ${this.formData.moneda}`;
+        },
+        formatoMonedaEspecifica(valor, moneda) {
+            const simbolo = moneda === 'EUR' ? '€' : '$';
+            return `${simbolo}${Number(valor || 0).toFixed(2)} ${moneda}`;
+        },
+        calcularMontoHospedaje() {
+            const noches = Number(this.formData.nochesHospedaje) || 0;
+            this.formData.montoHospedaje = noches * 600;
+        },
+        actualizarDenominacion() {
+            if (!this.formData.folio) {
+                this.formData.folio = this.generarNuevoFolio();
+                return;
+            }
+            this.formData.folio = this.formData.tipoPerfil === 'EXTERNO' 
+                ? this.formData.folio.replace('PRES', 'COT') 
+                : this.formData.folio.replace('COT', 'PRES');
+        },
+        agregarFilaPresupuesto() {
+            this.presupuestoItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'AUTOBUS FORANEO', origen: '', horaSalida: '', destino: '', horaLlegada: '', proveedor: '', monto: 0 });
+        },
+        eliminarFilaPresupuesto(index) {
+            this.presupuestoItems.splice(index, 1);
+        },
+        agregarFilaComprobacion() {
+            this.comprobacionItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'AUTOBUS FORANEO', proveedorFactura: '', numeroFactura: '', montoReal: 0, archivoNombre: null });
+        },
+        eliminarFilaComprobacion(index) {
+            this.comprobacionItems.splice(index, 1);
+        },
+        agregarFilaExtension() {
+            this.extensionItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'TRANSPORTE URBANO', justificacion: '', monto: 0 });
+        },
+        eliminarFilaExtension(index) {
+            this.extensionItems.splice(index, 1);
+        },
         subirArchivo(event, item) {
             const file = event.target.files[0];
             if (file) item.archivoNombre = file.name.toUpperCase();
         },
+
         subirArchivoExtension(event) {
             const file = event.target.files[0];
             if (file) {
@@ -1229,32 +1301,98 @@ createApp({
             }
         },
         visualizarComprobanteExtension() {
-            if (this.extensionData.archivoUrl) window.open(this.extensionData.archivoUrl, '_blank');
-            else if (this.extensionData.archivoAutorizacion) alert(`COMPROBANTE CARGADO: ${this.extensionData.archivoAutorizacion}`);
+            if (this.extensionData.archivoUrl) {
+                window.open(this.extensionData.archivoUrl, '_blank');
+            } else if (this.extensionData.archivoAutorizacion) {
+                alert(`VISUALIZANDO COMPROBANTE ALMACENADO: ${this.extensionData.archivoAutorizacion}`);
+            } else {
+                alert('NO HAY NINGÚN COMPROBANTE DE AUTORIZACIÓN CARGADO.');
+            }
         },
-        enviarPresupuesto() { alert(`PRESUPUESTO FOLIO ${this.formData.folio} ENVIADO A REVISIÓN.`); },
-        descargarTodosLosReportesExcel() {
-            const wb = XLSX.utils.book_new();
-            const dataGeneral = this.repositorioBD.map(p => ({
-                "FOLIO": p.folio,
-                "FECHA": p.fechaPresupuesto,
-                "AUDITOR": p.auditor,
-                "PERFIL": p.tipoPerfil,
-                "MES": p.mesTrabajo,
-                "SEMANA": p.numeroSemana,
-                "NOCHES": p.nochesHospedaje,
-                "DÍAS FORÁNEO": p.diasForaneo,
-                "DÍAS EDOMEX": p.diasEdomex,
-                "DÍAS PERS. EXTERNO": p.diasPersonalExterno,
-                "DÍAS CUOTAS ESP.": p.diasCuotasEspeciales,
-                "ALIMENTOS": p.montoAlimentos,
-                "HOSPEDAJE": p.montoHospedaje,
-                "TOTAL BASE": p.montoTotal,
-                "ESTATUS EXTENSIÓN": p.estatusExtension
-            }));
-            const wsGeneral = XLSX.utils.json_to_sheet(dataGeneral);
-            XLSX.utils.book_append_sheet(wb, wsGeneral, "Presupuestos_General");
-            XLSX.writeFile(wb, "Reporte_General_Viaticos_2026.xlsx");
+
+        validarFormulario() {
+            if (!this.formData.auditor) {
+                alert('CANDADO ACTIVADO: INDIQUE EL NOMBRE DEL AUDITOR.');
+                return false;
+            }
+            if (!this.formData.clabe || this.formData.clabe.length !== 18) {
+                alert('CANDADO ACTIVADO: LA CLABE INTERBANCARIA DEBE CONTENER 18 DÍGITOS EXACTOS.');
+                return false;
+            }
+            return true;
+        },
+
+        enviarPresupuesto() {
+            if (!this.validarFormulario()) return;
+            
+            if (!confirm('¿ESTÁ SEGURO DE QUE LOS DATOS SON CORRECTOS Y DESEA ENVIAR EL PRESUPUESTO PARA AUTORIZACIÓN?')) {
+                return;
+            }
+
+            const destinatario = 'viaticos@sm-enterprise.com.mx';
+            const asunto = encodeURIComponent(`SOLICITUD DE AUTORIZACIÓN DE PRESUPUESTO - FOLIO: ${this.formData.folio}`);
+            const cuerpo = encodeURIComponent(
+                `SOLICITUD DE AUTORIZACIÓN DE PRESUPUESTO\n\n` +
+                `FOLIO: ${this.formData.folio}\n` +
+                `AUDITOR: ${this.formData.auditor}\n` +
+                `FECHA: ${this.formData.fechaPresupuesto}\n` +
+                `MES DE TRABAJO: ${this.formData.mesTrabajo} (SEMANA ${this.formData.numeroSemana})\n` +
+                `CLABE: ${this.formData.clabe}\n` +
+                `TOTAL GENERAL: ${this.formatoMoneda(this.totalGeneralPresupuesto)}\n\n` +
+                `POR FAVOR REVISAR Y AUTORIZAR EN EL SISTEMA.`
+            );
+            
+            window.location.href = `mailto:${destinatario}?subject=${asunto}&body=${cuerpo}`;
+        },
+
+        guardarPresupuestoEnBD() {
+            if (!this.validarFormulario()) return;
+            if (!this.puedeEscribir) {
+                alert('ACCESO DENEGADO: SU USUARIO NO TIENE PERMISOS DE ESCRITURA PARA MODIFICAR LA BD.');
+                return;
+            }
+
+            if (!confirm('¿ESTÁ SEGURO DE QUE LOS DATOS INGRESADOS SON CORRECTOS ANTES DE GUARDAR EN LA BASE DE DATOS?')) {
+                return;
+            }
+
+            const registro = {
+                ...JSON.parse(JSON.stringify(this.formData)),
+                montoTotal: this.totalGeneralPresupuesto,
+                extensionAutorizada: this.extensionAutorizada,
+                extensionCancelada: this.extensionCancelada,
+                cancelado: this.formData.cancelado || false,
+                presupuestoItems: JSON.parse(JSON.stringify(this.presupuestoItems)),
+                comprobacionItems: JSON.parse(JSON.stringify(this.comprobacionItems)),
+                extensionItems: JSON.parse(JSON.stringify(this.extensionItems)),
+                extensionData: JSON.parse(JSON.stringify(this.extensionData))
+            };
+
+            const idxExistente = this.repositorioBD.findIndex(p => p.folio === registro.folio);
+            if (idxExistente >= 0) {
+                this.repositorioBD[idxExistente] = registro;
+                alert(`PRESUPUESTO CON FOLIO ${registro.folio} ACTUALIZADO EXITOSAMENTE EN LA BASE DE DATOS (${this.configBd.tipo}).`);
+            } else {
+                this.repositorioBD.unshift(registro);
+                alert(`PRESUPUESTO CON FOLIO ${registro.folio} GUARDADO EXITOSAMENTE EN LA BASE DE DATOS (${this.configBd.tipo}).`);
+            }
+        },
+
+        probarConexion() {
+            if (!this.configBd.endpoint) {
+                alert('POR FAVOR ESPECIFIQUE LA RUTA / CONNECTION STRING DE LA BASE DE DATOS.');
+                return;
+            }
+            this.statusBd = 'CONECTADO';
+            alert(`CONEXIÓN CON EL SERVIDOR DE BASE DE DATOS Y BI EN LA NUBE ESTABLECIDA SATISFACTORIAMENTE.\nMOTOR: ${this.configBd.tipo}\nTABLA: ${this.configBd.tabla}`);
+        },
+
+        obtenerMontoExtension(p) {
+            if (!p.extensionItems) return 0;
+            return p.extensionItems.reduce((acc, i) => acc + (Number(i.monto) || 0), 0);
+        },
+        consultarReportesBD() {
+            alert(`CONSULTA EJECUTADA EN BASE DE DATOS.\nTOTAL DE PRESUPUESTOS ENCONTRADOS: ${this.presupuestosFiltrados.length}`);
         },
         cargarPresupuestoParaVer(p) {
             this.formData = JSON.parse(JSON.stringify(p));
@@ -1265,60 +1403,72 @@ createApp({
             this.extensionItems = JSON.parse(JSON.stringify(p.extensionItems || []));
             this.extensionData = JSON.parse(JSON.stringify(p.extensionData || { jefeEmail: '', gerenteEmail: '', archivoAutorizacion: null, archivoUrl: null }));
             this.activeTab = 'presupuesto';
+            alert(`CARGANDO FOLIO ${p.folio} EN MODO LECTURA DE CONSULTA.`);
         },
-        buscarYConciliarFolio() {
-            if (!this.folioBusqueda) return;
-            const presupuestoEncontrado = this.repositorioBD.find(p => p.folio === this.folioBusqueda);
-            if (presupuestoEncontrado) {
-                this.cargarPresupuestoParaVer(presupuestoEncontrado);
-                this.activeTab = 'comprobacion';
-                alert(`FOLIO ${this.folioBusqueda} ENCONTRADO Y CARGADO PARA COMPROBACIÓN.`);
+        cargarPresupuestoParaEditar(p) {
+            if (!this.puedeEscribir) {
+                alert('ACCESO DENEGADO: NO TIENE PERMISOS PARA MODIFICAR PRESUPUESTOS.');
+                return;
+            }
+            this.formData = JSON.parse(JSON.stringify(p));
+            this.extensionAutorizada = p.extensionAutorizada || false;
+            this.extensionCancelada = p.extensionCancelada || false;
+            this.presupuestoItems = JSON.parse(JSON.stringify(p.presupuestoItems || []));
+            this.comprobacionItems = JSON.parse(JSON.stringify(p.comprobacionItems || []));
+            this.extensionItems = JSON.parse(JSON.stringify(p.extensionItems || []));
+            this.extensionData = JSON.parse(JSON.stringify(p.extensionData || { jefeEmail: '', gerenteEmail: '', archivoAutorizacion: null, archivoUrl: null }));
+            this.activeTab = 'presupuesto';
+            alert(`FOLIO ${p.folio} CARGADO PARA EDICIÓN. RECUERDE PRESIONAR "GUARDAR EN BD" TRAS HACER LOS CAMBIOS.`);
+        },
+
+        guardarUsuario() {
+            if (!this.nuevoUsuario.nombre || !this.nuevoUsuario.password) {
+                alert('INDIQUE NOMBRE Y PASSWORD.');
+                return;
+            }
+            if (this.editandoUsuarioIdx !== null) {
+                this.dbUsuarios[this.editandoUsuarioIdx] = { ...this.nuevoUsuario, id: this.dbUsuarios[this.editandoUsuarioIdx].id };
+                this.editandoUsuarioIdx = null;
             } else {
-                alert(`EL FOLIO ${this.folioBusqueda} NO SE ENCUENTRA REGISTRADO EN LA BASE DE DATOS.`);
+                this.dbUsuarios.push({ ...this.nuevoUsuario, id: Date.now() });
+            }
+            this.guardarUsuariosPersistidos();
+            this.nuevoUsuario = { nombre: '', password: '', permiso: 'ESCRITURA' };
+        },
+        editarUsuario(idx) {
+            this.editandoUsuarioIdx = idx;
+            this.nuevoUsuario = { ...this.dbUsuarios[idx] };
+        },
+        eliminarUsuario(idx) {
+            if (confirm('¿CONFIRMA DAR DE BAJA AL USUARIO?')) {
+                this.dbUsuarios.splice(idx, 1);
+                this.guardarUsuariosPersistidos();
             }
         },
-        aceptarConciliacion() {
-            this.guardarPresupuestoEnBD();
-            alert(`CONCILIACIÓN DEL FOLIO ${this.formData.folio} ACEPTADA Y GUARDADA SATISFACTORIAMENTE.`);
-        },
-        cancelarConciliacion() {
-            if (confirm(`¿DESEA CANCELAR LA CONCILIACIÓN DEL FOLIO ${this.formData.folio}? LOS GASTOS COMPROBADOS SE REINICIARÁN.`)) {
-                this.comprobacionItems = [];
-                alert('CONCILIACIÓN CANCELADA.');
+        guardarElementoCatalogo() {
+            if (!this.nuevoElementoCatalogo) return;
+            const val = this.nuevoElementoCatalogo.toUpperCase();
+            if (this.subTabAdmin === 'auditores') this.catalogos.auditores.push(val);
+            if (this.subTabAdmin === 'dealers') this.catalogos.dealers.push(val);
+            if (this.subTabAdmin === 'conceptos') {
+                this.catalogos.todosConceptos.push(val);
+                this.catalogos.conceptosTransporte.push(val);
             }
+            if (this.subTabAdmin === 'correos') this.catalogos.correos.push(val.toLowerCase());
+            if (this.subTabAdmin === 'monedas') this.catalogos.monedas.push(val);
+            this.nuevoElementoCatalogo = '';
         },
-        toggleMenuCancelacion(folio) {
-            this.menuCancelacionAbierto = this.menuCancelacionAbierto === folio ? null : folio;
-        },
-        cancelarPresupuesto(p) {
-            if (confirm(`¿RECHAZAR PRESUPUESTO BASE FOLIO ${p.folio}?`)) {
-                p.cancelado = true;
-                this.menuCancelacionAbierto = null;
+        eliminarElementoCatalogo(idx) {
+            if (confirm('¿CONFIRMA DAR DE BAJA EL REGISTRO DEL CATÁLOGO?')) {
+                this.listaCatalogoActivo.splice(idx, 1);
             }
-        },
-        cancelarExtension(p) {
-            if (confirm(`¿RECHAZAR EXTENSIÓN DEL FOLIO ${p.folio}?`)) {
-                p.extensionCancelada = true;
-                p.estatusExtension = 'RECHAZADA';
-                this.menuCancelacionAbierto = null;
-            }
-        },
-        cancelarTodo(p) {
-            if (confirm(`¿RECHAZAR TODO EL REGISTRO FOLIO ${p.folio}?`)) {
-                p.cancelado = true;
-                p.extensionCancelada = true;
-                p.estatusExtension = 'RECHAZADA';
-                p.montoTotal = 0;
-                this.menuCancelacionAbierto = null;
-            }
-        },
-        obtenerMontoExtension(p) {
-            if (!p.extensionItems) return 0;
-            return p.extensionItems.reduce((acc, i) => acc + (Number(i.monto) || 0), 0);
         }
+    },
+    mounted() {
+        this.cargarUsuariosPersistidos();
+        this.nuevoPresupuesto();
     }
 }).mount('#app');
 </script>
-
 </body>
 </html>
