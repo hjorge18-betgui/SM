@@ -1344,16 +1344,12 @@ createApp({
             }
         }
     },
-   // Dentro de tu código Vue / JavaScript:
-mounted() {
-    db.collection('dbUsuarios').onSnapshot((snapshot) => {
-      this.dbUsuarios = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    });
-  }
-}).mount('#app');}).mount('#app');
+    mounted() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+}).mount('#app');
 </script>
 
 </body>
