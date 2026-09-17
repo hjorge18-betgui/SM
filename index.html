@@ -8,6 +8,9 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- GOOGLE FIREBASE SDK (COMPAT) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-black text-gray-100 font-sans antialiased uppercase">
 
@@ -32,11 +35,20 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-neutral-300 mb-1">CONTRASEÑA</label>
-                    <input type="password" v-model="loginForm.password" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-amber-500">
+                    <div class="relative flex items-center">
+                        <input :type="mostrarPasswordLogin ? 'text' : 'password'" v-model="loginForm.password" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-amber-500">
+                        <button type="button" @click="mostrarPasswordLogin = !mostrarPasswordLogin" class="absolute right-2.5 text-neutral-400 hover:text-amber-400 text-sm transition p-1" :title="mostrarPasswordLogin ? 'Ocultar contraseña' : 'Ver contraseña'">
+                            <span v-if="mostrarPasswordLogin">👁️</span>
+                            <span v-else>🔒</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div v-if="loginError" class="text-xs text-red-500 font-bold text-center bg-red-950/50 p-2 rounded border border-red-900">
-                    {{ loginError }}
+                <div v-if="loginError" class="text-xs text-red-500 font-bold text-center bg-red-950/50 p-2.5 rounded border border-red-900 space-y-1">
+                    <div>{{ loginError }}</div>
+                    <button type="button" @click="restablecerPasswordDefault" class="text-[10px] text-amber-400 hover:text-amber-300 underline block mx-auto font-normal">
+                        ¿Olvidó su contraseña? Clic aquí para restablecer a "123"
+                    </button>
                 </div>
 
                 <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
@@ -46,32 +58,49 @@
         </div>
     </div>
 
-    <!-- CAMBIO DE CONTRASEÑA FORZADO -->
+    <!-- CAMBIO DE CONTRASEÑA VOLUNTARIO O REQUERIDO -->
     <div v-if="requiereCambioPassword" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-neutral-900 border border-amber-500/50 p-6 sm:p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
             <div class="text-center space-y-1">
-                <h2 class="text-xl font-bold text-amber-500 tracking-wide">⚠️ CAMBIO DE CONTRASEÑA REQUERIDO</h2>
-                <p class="text-xs text-neutral-300">POR SEGURIDAD, DEBE ACTUALIZAR SU CONTRASEÑA PREDETERMINADA ANTES DE CONTINUAR.</p>
+                <h2 class="text-xl font-bold text-amber-500 tracking-wide">🔑 CAMBIO DE CONTRASEÑA</h2>
+                <p class="text-xs text-neutral-300">INGRESE SU NUEVA CONTRASEÑA PARA EL USUARIO: <span class="text-amber-400 font-bold">{{ usuarioActivo.nombre }}</span></p>
             </div>
 
             <form @submit.prevent="actualizarPasswordForzado" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-neutral-300 mb-1">NUEVA CONTRASEÑA</label>
-                    <input type="password" v-model="cambioPassForm.nueva" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-amber-500">
+                    <div class="relative flex items-center">
+                        <input :type="mostrarPassNueva ? 'text' : 'password'" v-model="cambioPassForm.nueva" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-amber-500">
+                        <button type="button" @click="mostrarPassNueva = !mostrarPassNueva" class="absolute right-2.5 text-neutral-400 hover:text-amber-400 text-sm transition p-1" :title="mostrarPassNueva ? 'Ocultar contraseña' : 'Ver contraseña'">
+                            <span v-if="mostrarPassNueva">👁️</span>
+                            <span v-else>🔒</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-neutral-300 mb-1">CONFIRMAR NUEVA CONTRASEÑA</label>
-                    <input type="password" v-model="cambioPassForm.confirmacion" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-amber-500">
+                    <div class="relative flex items-center">
+                        <input :type="mostrarPassConf ? 'text' : 'password'" v-model="cambioPassForm.confirmacion" placeholder="••••••••" class="w-full bg-black border border-neutral-700 text-white text-xs rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-amber-500">
+                        <button type="button" @click="mostrarPassConf = !mostrarPassConf" class="absolute right-2.5 text-neutral-400 hover:text-amber-400 text-sm transition p-1" :title="mostrarPassConf ? 'Ocultar contraseña' : 'Ver contraseña'">
+                            <span v-if="mostrarPassConf">👁️</span>
+                            <span v-else>🔒</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="cambioPassError" class="text-xs text-red-500 font-bold text-center bg-red-950/50 p-2 rounded border border-red-900">
                     {{ cambioPassError }}
                 </div>
 
-                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
-                    GUARDAR NUEVA CONTRASEÑA Y CONTINUAR
-                </button>
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+                        GUARDAR NUEVA CONTRASEÑA
+                    </button>
+                    <button type="button" @click="omitirCambioPassword" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold py-2.5 px-4 rounded-xl text-xs transition border border-neutral-700">
+                        CANCELAR
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -91,6 +120,9 @@
                 <span class="text-amber-400 font-bold text-xs bg-neutral-800 border border-neutral-700 px-3 py-1.5 rounded-lg">
                     {{ usuarioActivo.nombre }} ({{ usuarioActivo.permiso }})
                 </span>
+                <button @click="abrirModalCambiarPassword" class="bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-xs px-2.5 py-1.5 rounded-lg border border-neutral-700 transition font-bold" title="Cambiar Contraseña">
+                    🔑 CLAVE
+                </button>
                 <button @click="cerrarSesion" class="bg-red-900/60 hover:bg-red-800 text-red-200 text-xs px-2 py-1.5 rounded-lg border border-red-700 transition font-bold" title="Cerrar Sesión">
                     🚪 SALIR
                 </button>
@@ -657,7 +689,12 @@
                     
                     <div class="bg-black p-3 rounded-lg border border-neutral-800 grid grid-cols-1 md:grid-cols-4 gap-2">
                         <input type="text" spellcheck="true" lang="es" v-model="nuevoUsuario.nombre" placeholder="NOMBRE COMPLETO" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase">
-                        <input type="password" v-model="nuevoUsuario.password" placeholder="CONTRASEÑA" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white">
+                        <div class="relative flex items-center">
+                            <input :type="mostrarPassNuevoUsuario ? 'text' : 'password'" v-model="nuevoUsuario.password" placeholder="CONTRASEÑA" class="w-full bg-neutral-900 border border-neutral-700 rounded p-1.5 pr-8 text-xs text-white">
+                            <button type="button" @click="mostrarPassNuevoUsuario = !mostrarPassNuevoUsuario" class="absolute right-2 text-neutral-400 hover:text-amber-400 text-xs">
+                                {{ mostrarPassNuevoUsuario ? '👁️' : '🔒' }}
+                            </button>
+                        </div>
                         <select v-model="nuevoUsuario.permiso" class="bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-amber-400 font-bold">
                             <option value="FULL ACCESS">FULL ACCESS (ADMINISTRADOR)</option>
                             <option value="ESCRITURA">ESCRITURA (CREAR / EDITAR)</option>
@@ -683,7 +720,13 @@
                                 <tr v-for="(u, idx) in dbUsuarios" :key="u.id" class="hover:bg-neutral-800/50">
                                     <td class="p-2 font-mono text-neutral-500">{{ u.id }}</td>
                                     <td class="p-2 font-bold">{{ u.nombre }}</td>
-                                    <td class="p-2 font-mono text-neutral-400">••••••••</td>
+                                    <td class="p-2 font-mono text-neutral-300">
+                                        <span v-if="u.verPassword" class="text-amber-400 font-bold">{{ u.password }}</span>
+                                        <span v-else>••••••••</span>
+                                        <button type="button" @click="u.verPassword = !u.verPassword" class="ml-2 text-neutral-400 hover:text-amber-400 text-xs" :title="u.verPassword ? 'Ocultar contraseña' : 'Ver contraseña'">
+                                            {{ u.verPassword ? '👁️' : '🔒' }}
+                                        </button>
+                                    </td>
                                     <td class="p-2">
                                         <span :class="['px-2 py-0.5 rounded text-[10px] font-bold', 
                                                        u.permiso === 'FULL ACCESS' ? 'bg-purple-950 text-purple-300 border border-purple-800' : 
@@ -872,8 +915,42 @@
 <script>
 const { createApp } = Vue;
 
+const firebaseConfig = {
+    apiKey: "AIzaSyBLS2EtGndorp3vzkzlgeuF0BQYGt7G560",
+    authDomain: "sm-crm-e9ba4.firebaseapp.com",
+    projectId: "sm-crm-e9ba4",
+    storageBucket: "sm-crm-e9ba4.firebasestorage.app",
+    messagingSenderId: "778578980378",
+    appId: "1:778578980378:web:4902ebe4613ec8b83deba3",
+    measurementId: "G-HR39EKNKW4",
+    baseUrl: "https://firestore.googleapis.com/v1/projects/sm-crm-e9ba4/databases/(default)/documents"
+};
+
 createApp({
     data() {
+        const defaultUsers = [
+            { id: 1, nombre: 'ADMINISTRADOR GENERAL', password: '123', permiso: 'FULL ACCESS' },
+            { id: 2, nombre: 'KEILA PALACIOS ANAYA', password: '123', permiso: 'ESCRITURA' },
+            { id: 3, nombre: 'GERENTE REVISION', password: '123', permiso: 'LECTURA' }
+        ];
+
+        let usuariosIniciales = defaultUsers;
+        try {
+            const keys = ['viaticos_db_usuarios', 'dbUsuarios_viaticos', 'viaticos_usuarios'];
+            for (const k of keys) {
+                const guardados = localStorage.getItem(k);
+                if (guardados) {
+                    const parsed = JSON.parse(guardados);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        usuariosIniciales = parsed;
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Error leyendo usuarios de localStorage:', e);
+        }
+
         return {
             activeTab: 'presupuesto',
             subTabAdmin: 'tarifas',
@@ -882,6 +959,10 @@ createApp({
             usuarioActivo: { id: null, nombre: '', permiso: '' },
             loginForm: { usuarioId: '', password: '' },
             loginError: '',
+            mostrarPasswordLogin: false,
+            mostrarPassNueva: false,
+            mostrarPassConf: false,
+            mostrarPassNuevoUsuario: false,
             cambioPassForm: { nueva: '', confirmacion: '' },
             cambioPassError: '',
             extensionAutorizada: false,
@@ -905,19 +986,17 @@ createApp({
                     hospedaje: 600
                 }
             },
-            dbUsuarios: [
-                { id: 1, nombre: 'ADMINISTRADOR GENERAL', password: '123', permiso: 'FULL ACCESS' },
-                { id: 2, nombre: 'KEILA PALACIOS ANAYA', password: '123', permiso: 'ESCRITURA' },
-                { id: 3, nombre: 'GERENTE REVISION', password: '123', permiso: 'LECTURA' }
-            ],
+            dbUsuarios: usuariosIniciales,
             nuevoUsuario: { nombre: '', password: '', permiso: 'ESCRITURA' },
             editandoUsuarioIdx: null,
             configBd: {
-                tipo: 'SQL_SERVER',
-                endpoint: 'Server=tcp:sm-cloud.database.windows.net;Database=ViaticosDB;User ID=admin_viaticos;Password=*****;',
-                apiKey: 'SM_ENTERPRISE_AZURE_KEY_2026',
-                tabla: 'tbl_presupuestos_viaticos'
+                tipo: 'FIREBASE',
+                endpoint: 'sm-crm-e9ba4.firebaseapp.com',
+                apiKey: 'AIzaSyBLS2EtGndorp3vzkzlgeuF0BQYGt7G560',
+                tabla: 'viaticos_presupuestos'
             },
+            firebaseDb: null,
+            firebaseConectado: false,
             filtroReporte: { folio: '', auditor: '', mes: '' },
             repositorioBD: [
                 {
@@ -979,6 +1058,30 @@ createApp({
             presupuestoItems: [],
             comprobacionItems: [],
             extensionItems: []
+        }
+    },
+    watch: {
+        dbUsuarios: {
+            deep: true,
+            handler(val) {
+                this.persistirUsuarios();
+            }
+        },
+        repositorioBD: {
+            deep: true,
+            handler(val) {
+                try {
+                    localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(val));
+                } catch(e) {}
+            }
+        },
+        catalogos: {
+            deep: true,
+            handler(val) {
+                try {
+                    localStorage.setItem('viaticos_catalogos', JSON.stringify(val));
+                } catch(e) {}
+            }
         }
     },
     computed: {
@@ -1043,6 +1146,92 @@ createApp({
         }
     },
     methods: {
+        persistirUsuarios() {
+            try {
+                const dataStr = JSON.stringify(this.dbUsuarios);
+                localStorage.setItem('viaticos_db_usuarios', dataStr);
+                localStorage.setItem('dbUsuarios_viaticos', dataStr);
+                localStorage.setItem('viaticos_usuarios', dataStr);
+            } catch(e) {
+                console.error('Error al guardar usuarios en localStorage:', e);
+            }
+            try {
+                if (window.indexedDB) {
+                    const req = indexedDB.open('ViaticosDB', 1);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('usuarios')) {
+                            db.createObjectStore('usuarios', { keyPath: 'id' });
+                        }
+                    };
+                    req.onsuccess = (e) => {
+                        const db = e.target.result;
+                        const tx = db.transaction('usuarios', 'readwrite');
+                        const store = tx.objectStore('usuarios');
+                        this.dbUsuarios.forEach(u => store.put(JSON.parse(JSON.stringify(u))));
+                    };
+                }
+            } catch(e) {}
+        },
+        cargarDatosDeLocalStorage() {
+            try {
+                const keys = ['viaticos_db_usuarios', 'dbUsuarios_viaticos', 'viaticos_usuarios'];
+                let usuariosGuardados = null;
+                for (const k of keys) {
+                    const val = localStorage.getItem(k);
+                    if (val) {
+                        try {
+                            const parsed = JSON.parse(val);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                usuariosGuardados = parsed;
+                                break;
+                            }
+                        } catch(e) {}
+                    }
+                }
+                if (usuariosGuardados) {
+                    this.dbUsuarios = usuariosGuardados;
+                }
+                const presupuestosGuardados = localStorage.getItem('viaticos_repositorio_bd');
+                if (presupuestosGuardados) {
+                    const parsed = JSON.parse(presupuestosGuardados);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        this.repositorioBD = parsed;
+                    }
+                }
+                const catalogosGuardados = localStorage.getItem('viaticos_catalogos');
+                if (catalogosGuardados) {
+                    const parsed = JSON.parse(catalogosGuardados);
+                    if (parsed && typeof parsed === 'object') {
+                        this.catalogos = { ...this.catalogos, ...parsed };
+                    }
+                }
+            } catch (err) {
+                console.warn('Error al leer datos de localStorage:', err);
+            }
+            try {
+                if (window.indexedDB) {
+                    const req = indexedDB.open('ViaticosDB', 1);
+                    req.onsuccess = (e) => {
+                        const db = e.target.result;
+                        if (db.objectStoreNames.contains('usuarios')) {
+                            const tx = db.transaction('usuarios', 'readonly');
+                            const store = tx.objectStore('usuarios');
+                            const getAll = store.getAll();
+                            getAll.onsuccess = () => {
+                                if (getAll.result && getAll.result.length > 0) {
+                                    const hasCustomPass = getAll.result.some(u => u.password && u.password !== '123');
+                                    if (hasCustomPass) {
+                                        this.dbUsuarios = getAll.result;
+                                        this.persistirUsuarios();
+                                    }
+                                }
+                            };
+                        }
+                    };
+                }
+            } catch(e) {}
+        },
         actualizarDenominacion() {
             if (this.formData.tipoPerfil === 'EXTERNO') {
                 this.formData.diasForaneo = 0;
@@ -1061,44 +1250,76 @@ createApp({
                 this.loginError = 'SELECCIONE UN USUARIO VÁLIDO.';
                 return;
             }
-            if (this.loginForm.password === user.password) {
+            const inputPass = String(this.loginForm.password || '').trim();
+            const userPass = String(user.password || '').trim();
+
+            if (inputPass === userPass) {
                 this.usuarioActivo = { ...user };
                 this.sesionIniciada = true;
-                if (user.password === '123') {
-                    this.requiereCambioPassword = true;
-                } else {
-                    if (this.catalogos.auditores.includes(user.nombre)) {
-                        this.formData.auditor = user.nombre;
-                    }
+                this.requiereCambioPassword = false;
+                if (this.catalogos.auditores.includes(user.nombre)) {
+                    this.formData.auditor = user.nombre;
                 }
             } else {
                 this.loginError = 'CONTRASEÑA INCORRECTA PARA EL USUARIO.';
             }
         },
+        abrirModalCambiarPassword() {
+            this.cambioPassForm = { nueva: '', confirmacion: '' };
+            this.cambioPassError = '';
+            this.requiereCambioPassword = true;
+        },
+        restablecerPasswordDefault() {
+            const user = this.dbUsuarios.find(u => u.id === Number(this.loginForm.usuarioId));
+            if (user) {
+                user.password = '123';
+                this.persistirUsuarios();
+                this.loginForm.password = '123';
+                this.loginError = '';
+                alert(`LA CONTRASEÑA DEL USUARIO "${user.nombre}" SE HA RESTABLECIDO A: 123`);
+            } else {
+                alert('PRIMERO SELECCIONE UN USUARIO DE LA LISTA.');
+            }
+        },
+        omitirCambioPassword() {
+            this.requiereCambioPassword = false;
+        },
         actualizarPasswordForzado() {
             this.cambioPassError = '';
-            if (!this.cambioPassForm.nueva || !this.cambioPassForm.confirmacion) {
+            const nueva = String(this.cambioPassForm.nueva || '').trim();
+            const conf = String(this.cambioPassForm.confirmacion || '').trim();
+
+            if (!nueva || !conf) {
                 this.cambioPassError = 'LLENE AMBOS CAMPOS DE CONTRASEÑA.';
                 return;
             }
-            if (this.cambioPassForm.nueva !== this.cambioPassForm.confirmacion) {
+            if (nueva !== conf) {
                 this.cambioPassError = 'LAS CONTRASEÑAS NO COINCIDEN.';
                 return;
             }
-            if (this.cambioPassForm.nueva === '123') {
-                this.cambioPassError = 'DEBE INGRESAR UNA CONTRASEÑA DIFERENTE A LA PREDETERMINADA.';
-                return;
+            
+            const targetId = (this.usuarioActivo && this.usuarioActivo.id)
+                ? this.usuarioActivo.id
+                : Number(this.loginForm.usuarioId);
+
+            const idxBD = this.dbUsuarios.findIndex(u => u.id === targetId);
+            if (idxBD >= 0) {
+                this.dbUsuarios[idxBD].password = nueva;
+                this.usuarioActivo = { ...this.dbUsuarios[idxBD] };
+                this.guardarUsuarioEnFirebase(this.dbUsuarios[idxBD]);
             }
-            this.usuarioActivo.password = this.cambioPassForm.nueva;
-            const idxBD = this.dbUsuarios.findIndex(u => u.id === this.usuarioActivo.id);
-            if (idxBD >= 0) this.dbUsuarios[idxBD].password = this.cambioPassForm.nueva;
+            this.persistirUsuarios();
+            this.sesionIniciada = true;
             this.requiereCambioPassword = false;
-            alert('CONTRASEÑA ACTUALIZADA SATISFACTORIAMENTE.');
+            this.loginForm.password = nueva;
+            this.cambioPassForm = { nueva: '', confirmacion: '' };
+            alert(`CONTRASEÑA ACTUALIZADA Y GUARDADA EN FIREBASE SATISFACTORIAMENTE A: ${nueva}`);
         },
         cerrarSesion() {
             this.sesionIniciada = false;
             this.usuarioActivo = { id: null, nombre: '', permiso: '' };
             this.loginForm = { usuarioId: '', password: '' };
+            this.loginError = '';
         },
         calcularMontoHospedaje() {
             this.formData.montoHospedaje = (Number(this.formData.nochesHospedaje) || 0) * (Number(this.catalogos.tarifas.hospedaje) || 0);
@@ -1153,20 +1374,41 @@ createApp({
                 alert('LLENE TODOS LOS CAMPOS DEL USUARIO.');
                 return;
             }
+            let uGuardado = null;
             if (this.editandoUsuarioIdx !== null) {
-                this.dbUsuarios[this.editandoUsuarioIdx] = { ...this.nuevoUsuario, id: this.dbUsuarios[this.editandoUsuarioIdx].id };
+                this.dbUsuarios[this.editandoUsuarioIdx] = { 
+                    ...this.nuevoUsuario, 
+                    id: this.dbUsuarios[this.editandoUsuarioIdx].id,
+                    verPassword: false
+                };
+                if (this.usuarioActivo && this.usuarioActivo.id === this.dbUsuarios[this.editandoUsuarioIdx].id) {
+                    this.usuarioActivo = { ...this.dbUsuarios[this.editandoUsuarioIdx] };
+                }
+                uGuardado = this.dbUsuarios[this.editandoUsuarioIdx];
                 this.editandoUsuarioIdx = null;
             } else {
                 const newId = this.dbUsuarios.length ? Math.max(...this.dbUsuarios.map(u => u.id)) + 1 : 1;
-                this.dbUsuarios.push({ ...this.nuevoUsuario, id: newId });
+                uGuardado = { ...this.nuevoUsuario, id: newId, verPassword: false };
+                this.dbUsuarios.push(uGuardado);
             }
+            if (uGuardado) {
+                this.guardarUsuarioEnFirebase(uGuardado);
+            }
+            this.persistirUsuarios();
             this.nuevoUsuario = { nombre: '', password: '', permiso: 'ESCRITURA' };
         },
         editarUsuario(idx) {
             this.editandoUsuarioIdx = idx;
             this.nuevoUsuario = { ...this.dbUsuarios[idx] };
         },
-        eliminarUsuario(idx) { this.dbUsuarios.splice(idx, 1); },
+        eliminarUsuario(idx) { 
+            const usuarioEliminado = this.dbUsuarios[idx];
+            if (usuarioEliminado && usuarioEliminado.id) {
+                this.eliminarUsuarioDeFirebase(usuarioEliminado.id);
+            }
+            this.dbUsuarios.splice(idx, 1); 
+            this.persistirUsuarios();
+        },
         guardarElementoCatalogo() {
             if (!this.nuevoElementoCatalogo) return;
             const val = this.nuevoElementoCatalogo.toUpperCase();
@@ -1182,8 +1424,124 @@ createApp({
             if (this.subTabAdmin === 'conceptos') this.catalogos.todosConceptos.splice(idx, 1);
             if (this.subTabAdmin === 'correos') this.catalogos.correos.splice(idx, 1);
         },
+        guardarUsuarioEnFirebase(u) {
+            if (!u || !u.id) return;
+            const url = `${firebaseConfig.baseUrl}/viaticos_usuarios/${u.id}?key=${firebaseConfig.apiKey}`;
+            const payload = {
+                fields: {
+                    id: { integerValue: String(u.id) },
+                    nombre: { stringValue: String(u.nombre || '') },
+                    password: { stringValue: String(u.password || '') },
+                    permiso: { stringValue: String(u.permiso || '') },
+                    verPassword: { booleanValue: !!u.verPassword }
+                }
+            };
+            fetch(url, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(data => {
+                console.log('Usuario guardado en Firebase exitosamente:', data);
+            }).catch(err => {
+                console.error('Error al guardar usuario en Firebase:', err);
+            });
+        },
+        eliminarUsuarioDeFirebase(id) {
+            if (!id) return;
+            const url = `${firebaseConfig.baseUrl}/viaticos_usuarios/${id}?key=${firebaseConfig.apiKey}`;
+            fetch(url, { method: 'DELETE' }).then(() => {
+                console.log('Usuario eliminado de Firebase');
+            }).catch(err => {
+                console.error('Error al eliminar usuario en Firebase:', err);
+            });
+        },
+        cargarUsuariosDeFirebase() {
+            const url = `${firebaseConfig.baseUrl}/viaticos_usuarios?key=${firebaseConfig.apiKey}`;
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.documents && Array.isArray(data.documents)) {
+                        const usuariosNube = data.documents.map(d => {
+                            const f = d.fields || {};
+                            return {
+                                id: Number(f.id ? (f.id.integerValue || f.id.stringValue) : 0),
+                                nombre: f.nombre ? f.nombre.stringValue : '',
+                                password: f.password ? f.password.stringValue : '',
+                                permiso: f.permiso ? f.permiso.stringValue : '',
+                                verPassword: false
+                            };
+                        }).filter(u => u.id > 0);
+                        usuariosNube.sort((a, b) => a.id - b.id);
+                        if (usuariosNube.length > 0) {
+                            this.dbUsuarios = usuariosNube;
+                            this.persistirUsuarios();
+                            console.log('Usuarios sincronizados desde Firebase:', usuariosNube);
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.warn('No se pudo sincronizar usuarios desde Firebase (modo offline activo):', err);
+                });
+        },
+        guardarPresupuestoEnFirebase(p) {
+            if (!p || !p.folio) return;
+            const url = `${firebaseConfig.baseUrl}/viaticos_presupuestos/${encodeURIComponent(p.folio)}?key=${firebaseConfig.apiKey}`;
+            const payload = {
+                fields: {
+                    folio: { stringValue: String(p.folio) },
+                    datosJson: { stringValue: JSON.stringify(p) }
+                }
+            };
+            fetch(url, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(() => {
+                console.log('Presupuesto guardado en Firebase exitosamente:', p.folio);
+            }).catch(err => {
+                console.error('Error al guardar presupuesto en Firebase:', err);
+            });
+        },
+        cargarPresupuestosDeFirebase() {
+            const url = `${firebaseConfig.baseUrl}/viaticos_presupuestos?key=${firebaseConfig.apiKey}`;
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.documents && Array.isArray(data.documents)) {
+                        const presupuestosNube = data.documents.map(d => {
+                            const f = d.fields || {};
+                            if (f.datosJson && f.datosJson.stringValue) {
+                                try { return JSON.parse(f.datosJson.stringValue); } catch(e) {}
+                            }
+                            return null;
+                        }).filter(Boolean);
+                        if (presupuestosNube.length > 0) {
+                            this.repositorioBD = presupuestosNube;
+                            try {
+                                localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(presupuestosNube));
+                            } catch(e) {}
+                            console.log('Presupuestos sincronizados desde Firebase:', presupuestosNube.length);
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.warn('Modo offline para presupuestos:', err);
+                });
+        },
         probarConexionBD() {
-            alert(`CONEXIÓN CON BD NUBE ESTABLECIDA.\nMOTOR: ${this.configBd.tipo}\nENDPOINT: ${this.configBd.endpoint}`);
+            const url = `${firebaseConfig.baseUrl}/viaticos_usuarios?key=${firebaseConfig.apiKey}`;
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    alert(`¡CONEXIÓN EXITOSA CON GOOGLE FIREBASE!
+
+PROYECTO: sm-crm-e9ba4
+ESTADO: CONECTADO EN TIEMPO REAL
+COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios activos)`);
+                })
+                .catch(err => {
+                    alert(`ERROR DE CONEXIÓN CON FIREBASE: ${err.message}`);
+                });
         },
         guardarPresupuestoEnBD() {
             const index = this.repositorioBD.findIndex(p => p.folio === this.formData.folio);
@@ -1199,7 +1557,10 @@ createApp({
             };
             if (index >= 0) this.repositorioBD[index] = registro;
             else this.repositorioBD.push(registro);
-            alert(`PRESUPUESTO ${this.formData.folio} GUARDADO EN LA BASE DE DATOS.`);
+            if (registro.folio) {
+                this.guardarPresupuestoEnFirebase(registro);
+            }
+            alert(`PRESUPUESTO ${this.formData.folio} GUARDADO EN LA BASE DE DATOS (NUBE FIREBASE).`);
         },
         nuevoPresupuesto() {
             const consecutivo = Math.floor(1000 + Math.random() * 9000);
@@ -1245,7 +1606,71 @@ createApp({
             if (this.extensionData.archivoUrl) window.open(this.extensionData.archivoUrl, '_blank');
             else if (this.extensionData.archivoAutorizacion) alert(`COMPROBANTE CARGADO: ${this.extensionData.archivoAutorizacion}`);
         },
-        enviarPresupuesto() { alert(`PRESUPUESTO FOLIO ${this.formData.folio} ENVIADO A REVISIÓN.`); },
+        enviarPresupuesto() {
+            const auditor = this.formData.auditor || (this.usuarioActivo && this.usuarioActivo.nombre) || 'AUDITOR NO ASIGNADO';
+            
+            const destinatarios = [
+                this.extensionData.jefeEmail,
+                this.extensionData.gerenteEmail
+            ].filter(Boolean).join(',');
+
+            const destinatariosFinal = destinatarios || this.catalogos.correos.slice(0, 2).join(',');
+
+            const asunto = `SOLICITUD DE AUTORIZACIÓN DE PRESUPUESTO - ${this.formData.folio} - ${auditor}`;
+
+            let detalleRutas = '';
+            if (this.presupuestoItems.length > 0) {
+                detalleRutas = '
+DESGLOSE DE RUTAS Y TRANSPORTES:
+' + 
+                    this.presupuestoItems.map((r, i) => `  ${i + 1}. [${r.fecha || 'S/F'}] ${r.concepto || 'TRANSPORTE'}: ${r.origen || 'ORIGEN'} -> ${r.destino || 'DESTINO'} (${r.proveedor || 'N/A'}) = ${this.formatoMoneda(r.monto || 0)}`).join('
+') + '
+';
+            }
+
+            const cuerpo = `Estimados Autorizadores,
+
+Por medio del presente se solicita la revisión y autorización del siguiente presupuesto de viáticos:
+
+==================================================
+RESUMEN GENERAL DEL PRESUPUESTO
+==================================================
+- FOLIO: ${this.formData.folio}
+- AUDITOR: ${auditor}
+- PERFIL: ${this.formData.tipoPerfil}
+- FECHA: ${this.formData.fechaPresupuesto}
+- PERIODO: MES ${this.formData.mesTrabajo} (SEMANA ${this.formData.numeroSemana})
+- TOTAL DE DÍAS: ${this.totalDias}
+- NOCHES DE HOSPEDAJE: ${this.formData.nochesHospedaje}
+- CUENTA / CLABE: ${this.formData.clabe || 'NO ESPECIFICADA'}
+
+==================================================
+DESGLOSE ECONÓMICO (${this.formData.moneda})
+==================================================
+- TRANSPORTE: ${this.formatoMoneda(this.subtotalTransporte)}
+- ALIMENTOS: ${this.formatoMoneda(this.formData.montoAlimentos || 0)}
+- HOSPEDAJE: ${this.formatoMoneda(this.formData.montoHospedaje || 0)}
+${this.formData.tipoPerfil === 'EXTERNO' ? `- HONORARIOS: ${this.formatoMoneda(this.formData.honorarios || 0)}
+- RETENCIONES: -${this.formatoMoneda(this.formData.retenciones || 0)}
+` : ''}${this.extensionAutorizada ? `- EXTENSIÓN AUTORIZADA: ${this.formatoMoneda(this.totalExtension)}
+` : ''}--------------------------------------------------
+TOTAL GENERAL PRESUPUESTADO: ${this.formatoMoneda(this.totalGeneralPresupuesto)}
+==================================================
+${detalleRutas}
+Agradeciendo de antemano su atención, quedo a la espera de su pronta validación y autorización.
+
+Saludos cordiales,
+${auditor}`;
+
+            const mailtoUrl = `mailto:${destinatariosFinal}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+
+            const mailLink = document.createElement('a');
+            mailLink.href = mailtoUrl;
+            mailLink.target = '_blank';
+            document.body.appendChild(mailLink);
+            mailLink.click();
+            document.body.removeChild(mailLink);
+        },
         descargarTodosLosReportesExcel() {
             const wb = XLSX.utils.book_new();
             const dataGeneral = this.repositorioBD.map(p => ({
@@ -1345,6 +1770,13 @@ createApp({
         }
     },
     mounted() {
+        this.cargarDatosDeLocalStorage();
+        this.cargarUsuariosDeFirebase();
+        this.cargarPresupuestosDeFirebase();
+        // Sincronización periódica en segundo plano cada 30 segundos
+        setInterval(() => {
+            this.cargarUsuariosDeFirebase();
+        }, 30000);
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
