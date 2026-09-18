@@ -8,9 +8,6 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- GOOGLE FIREBASE SDK (COMPAT) -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-black text-gray-100 font-sans antialiased uppercase">
 
@@ -1606,8 +1603,9 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             if (this.extensionData.archivoUrl) window.open(this.extensionData.archivoUrl, '_blank');
             else if (this.extensionData.archivoAutorizacion) alert(`COMPROBANTE CARGADO: ${this.extensionData.archivoAutorizacion}`);
         },
-        enviarPresupuesto() {
+                        enviarPresupuesto() {
             const auditor = this.formData.auditor || (this.usuarioActivo && this.usuarioActivo.nombre) || 'AUDITOR NO ASIGNADO';
+            const nl = String.fromCharCode(10);
             
             const destinatarios = [
                 this.extensionData.jefeEmail,
@@ -1616,53 +1614,53 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
 
             const destinatariosFinal = destinatarios || this.catalogos.correos.slice(0, 2).join(',');
 
-            const asunto = `SOLICITUD DE AUTORIZACIÓN DE PRESUPUESTO - ${this.formData.folio} - ${auditor}`;
+            const asunto = 'SOLICITUD DE AUTORIZACION DE PRESUPUESTO - ' + this.formData.folio + ' - ' + auditor;
 
             let detalleRutas = '';
             if (this.presupuestoItems.length > 0) {
-                detalleRutas = '
-DESGLOSE DE RUTAS Y TRANSPORTES:
-' + 
-                    this.presupuestoItems.map((r, i) => `  ${i + 1}. [${r.fecha || 'S/F'}] ${r.concepto || 'TRANSPORTE'}: ${r.origen || 'ORIGEN'} -> ${r.destino || 'DESTINO'} (${r.proveedor || 'N/A'}) = ${this.formatoMoneda(r.monto || 0)}`).join('
-') + '
-';
+                const lineas = this.presupuestoItems.map((r, i) => '  ' + (i + 1) + '. [' + (r.fecha || 'S/F') + '] ' + (r.concepto || 'TRANSPORTE') + ': ' + (r.origen || 'ORIGEN') + ' -> ' + (r.destino || 'DESTINO') + ' (' + (r.proveedor || 'N/A') + ') = ' + this.formatoMoneda(r.monto || 0));
+                detalleRutas = nl + 'DESGLOSE DE RUTAS Y TRANSPORTES:' + nl + lineas.join(nl) + nl;
             }
 
-            const cuerpo = `Estimados Autorizadores,
+            let textoExterno = '';
+            if (this.formData.tipoPerfil === 'EXTERNO') {
+                textoExterno = '- HONORARIOS: ' + this.formatoMoneda(this.formData.honorarios || 0) + nl + '- RETENCIONES: -' + this.formatoMoneda(this.formData.retenciones || 0) + nl;
+            }
 
-Por medio del presente se solicita la revisión y autorización del siguiente presupuesto de viáticos:
+            let textoExtension = '';
+            if (this.extensionAutorizada) {
+                textoExtension = '- EXTENSION AUTORIZADA: ' + this.formatoMoneda(this.totalExtension) + nl;
+            }
 
-==================================================
-RESUMEN GENERAL DEL PRESUPUESTO
-==================================================
-- FOLIO: ${this.formData.folio}
-- AUDITOR: ${auditor}
-- PERFIL: ${this.formData.tipoPerfil}
-- FECHA: ${this.formData.fechaPresupuesto}
-- PERIODO: MES ${this.formData.mesTrabajo} (SEMANA ${this.formData.numeroSemana})
-- TOTAL DE DÍAS: ${this.totalDias}
-- NOCHES DE HOSPEDAJE: ${this.formData.nochesHospedaje}
-- CUENTA / CLABE: ${this.formData.clabe || 'NO ESPECIFICADA'}
+            const cuerpo = 'Estimados Autorizadores,' + nl + nl +
+                'Por medio del presente se solicita la revision y autorizacion del siguiente presupuesto de viaticos:' + nl + nl +
+                '==================================================' + nl +
+                'RESUMEN GENERAL DEL PRESUPUESTO' + nl +
+                '==================================================' + nl +
+                '- FOLIO: ' + this.formData.folio + nl +
+                '- AUDITOR: ' + auditor + nl +
+                '- PERFIL: ' + this.formData.tipoPerfil + nl +
+                '- FECHA: ' + this.formData.fechaPresupuesto + nl +
+                '- PERIODO: MES ' + this.formData.mesTrabajo + ' (SEMANA ' + this.formData.numeroSemana + ')' + nl +
+                '- TOTAL DE DIAS: ' + this.totalDias + nl +
+                '- NOCHES DE HOSPEDAJE: ' + this.formData.nochesHospedaje + nl +
+                '- CUENTA / CLABE: ' + (this.formData.clabe || 'NO ESPECIFICADA') + nl + nl +
+                '==================================================' + nl +
+                'DESGLOSE ECONOMICO (' + this.formData.moneda + ')' + nl +
+                '==================================================' + nl +
+                '- TRANSPORTE: ' + this.formatoMoneda(this.subtotalTransporte) + nl +
+                '- ALIMENTOS: ' + this.formatoMoneda(this.formData.montoAlimentos || 0) + nl +
+                '- HOSPEDAJE: ' + this.formatoMoneda(this.formData.montoHospedaje || 0) + nl +
+                textoExterno + textoExtension +
+                '--------------------------------------------------' + nl +
+                'TOTAL GENERAL PRESUPUESTADO: ' + this.formatoMoneda(this.totalGeneralPresupuesto) + nl +
+                '==================================================' + nl +
+                detalleRutas + nl +
+                'Agradeciendo de antemano su atencion, quedo a la espera de su pronta validacion y autorizacion.' + nl + nl +
+                'Saludos cordiales,' + nl +
+                auditor;
 
-==================================================
-DESGLOSE ECONÓMICO (${this.formData.moneda})
-==================================================
-- TRANSPORTE: ${this.formatoMoneda(this.subtotalTransporte)}
-- ALIMENTOS: ${this.formatoMoneda(this.formData.montoAlimentos || 0)}
-- HOSPEDAJE: ${this.formatoMoneda(this.formData.montoHospedaje || 0)}
-${this.formData.tipoPerfil === 'EXTERNO' ? `- HONORARIOS: ${this.formatoMoneda(this.formData.honorarios || 0)}
-- RETENCIONES: -${this.formatoMoneda(this.formData.retenciones || 0)}
-` : ''}${this.extensionAutorizada ? `- EXTENSIÓN AUTORIZADA: ${this.formatoMoneda(this.totalExtension)}
-` : ''}--------------------------------------------------
-TOTAL GENERAL PRESUPUESTADO: ${this.formatoMoneda(this.totalGeneralPresupuesto)}
-==================================================
-${detalleRutas}
-Agradeciendo de antemano su atención, quedo a la espera de su pronta validación y autorización.
-
-Saludos cordiales,
-${auditor}`;
-
-            const mailtoUrl = `mailto:${destinatariosFinal}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+            const mailtoUrl = 'mailto:' + destinatariosFinal + '?subject=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(cuerpo);
 
             const mailLink = document.createElement('a');
             mailLink.href = mailtoUrl;
