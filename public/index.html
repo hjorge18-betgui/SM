@@ -307,13 +307,39 @@
                                 <button v-if="puedeEscribir && !formData.cancelado" @click="eliminarFilaPresupuesto(idx)" class="text-red-500 hover:text-red-400 font-bold">✕</button>
                             </td>
                         </tr>
+
+                        <!-- SEPARADOR Y REGISTROS DE EXTENSIÓN DE PRESUPUESTO AUTORIZADA -->
+                        <template v-if="(formData.extensionGuardada || extensionGuardada || extensionAutorizada || formData.estatusExtension === 'AUTORIZADO') && extensionItems.length > 0">
+                            <tr class="bg-amber-950/70 border-t-2 border-b border-amber-600 text-amber-300 font-bold uppercase tracking-wider text-[11px]">
+                                <td colspan="11" class="p-2.5">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <span>⭐</span>
+                                            <span>EXTENSIÓN DE GASTOS Y TRANSPORTES ADICIONALES (AUTORIZADA Y GUARDADA)</span>
+                                        </div>
+                                        <span class="text-xs text-amber-400 font-mono font-bold">SUBTOTAL EXTENSIÓN: {{ formatoMoneda(totalExtension) }}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-for="(ext, eIdx) in extensionItems" :key="'ext-'+eIdx" class="bg-amber-950/20 hover:bg-amber-900/30 text-amber-100 border-b border-amber-900/40">
+                                <td class="p-2 font-bold text-center text-amber-400">EXT-{{ eIdx + 1 }}</td>
+                                <td class="p-2 font-bold text-white">{{ ext.dealer }}</td>
+                                <td class="p-2 font-mono">{{ ext.fecha }}</td>
+                                <td class="p-2 font-bold text-amber-300">{{ ext.concepto }}</td>
+                                <td colspan="5" class="p-2 italic text-neutral-300">
+                                    <span class="text-amber-500 font-bold not-italic text-[10px]">JUSTIFICACIÓN:</span> {{ ext.justificacion }}
+                                </td>
+                                <td class="p-2 font-mono font-bold text-right text-amber-400">{{ formatoMoneda(ext.monto) }}</td>
+                                <td class="p-2 text-center text-[10px] text-emerald-400 font-bold">✓ AUTORIZADA</td>
+                            </tr>
+                        </template>
                     </tbody>
                 </table>
             </div>
 
             <div class="p-4 bg-neutral-950 border-t border-neutral-800 space-y-2 text-xs">
                 <div class="flex justify-between text-neutral-400">
-                    <span>TOTAL PRESUPUESTADO TRANSPORTE:</span>
+                    <span>TOTAL PRESUPUESTADO TRANSPORTE BASE:</span>
                     <span class="font-mono font-bold text-white">{{ formatoMoneda(subtotalTransporte) }}</span>
                 </div>
                 <div class="flex justify-between text-neutral-400">
@@ -325,8 +351,8 @@
                     <span class="font-mono font-bold text-white">{{ formatoMoneda(formData.cancelado ? 0 : formData.montoHospedaje || 0) }}</span>
                 </div>
 
-                <div v-if="extensionAutorizada" class="flex justify-between text-amber-500 pt-1 border-t border-neutral-800 font-bold">
-                    <span>TOTAL PRESUPUESTADO EXTENSIÓN (AUTORIZADO):</span>
+                <div v-if="(formData.extensionGuardada || extensionGuardada || extensionAutorizada || formData.estatusExtension === 'AUTORIZADO') && extensionItems.length > 0" class="flex justify-between text-amber-400 pt-1 border-t border-neutral-800 font-bold">
+                    <span>TOTAL PRESUPUESTADO EXTENSIÓN (AUTORIZADO Y GUARDADO):</span>
                     <span class="font-mono">{{ formatoMoneda(totalExtension) }}</span>
                 </div>
                 
@@ -342,7 +368,7 @@
                 </div>
 
                 <div class="flex justify-between text-sm font-bold text-white pt-2 border-t border-neutral-700">
-                    <span>TOTAL GENERAL BASE + EXTENSIONES:</span>
+                    <span>TOTAL GENERAL (BASE + EXTENSIONES):</span>
                     <span class="font-mono text-amber-400 text-base">{{ formatoMoneda(totalGeneralPresupuesto) }}</span>
                 </div>
             </div>
@@ -363,6 +389,21 @@
 
     <!-- TAB 2: COMPROBACIÓN -->
     <main v-if="activeTab === 'comprobacion'" class="space-y-6">
+        <!-- BANNER DE COMPROBACIÓN EN PAUSA / CONGELADA -->
+        <div v-if="formData.estatusComprobacion === 'PAUSADA'" class="bg-amber-950/80 border-2 border-amber-600 p-4 rounded-xl flex justify-between items-center flex-wrap gap-3 shadow-lg">
+            <div class="space-y-1">
+                <h4 class="text-xs font-bold text-amber-400 flex items-center gap-2">
+                    <span class="text-base">⏸️</span> PROCESO DE COMPROBACIÓN PAUSADO Y CONGELADO
+                </h4>
+                <p class="text-xs text-neutral-200">
+                    Pausado por el auditor <span class="font-bold text-white">{{ formData.pausadoPor || 'AUDITOR' }}</span> el <span class="font-mono text-amber-300">{{ formData.fechaPausa || '' }}</span>. Todo el avance se encuentra salvaguardado en la base de datos para que otro auditor pueda retomarlo.
+                </p>
+            </div>
+            <button @click="reanudarComprobacion" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-1.5 shadow">
+                <span>▶️</span> REANUDAR COMPROBACIÓN
+            </button>
+        </div>
+
         <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">NOMBRE DEL AUDITOR</label>
@@ -388,7 +429,7 @@
         <div class="bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center flex-wrap gap-2">
             <div>
                 <h3 class="font-bold text-neutral-200 text-xs">EJECUCIÓN PRESUPUESTAL Y COMPROBACIÓN REAL POR DÍA</h3>
-                <p class="text-[10px] text-neutral-400">FOLIO CONSULTADO: <span class="text-amber-400 font-mono font-bold">{{ formData.folio || 'N/A' }}</span> | PRESUPUESTO BASE MONTO: <span class="text-white font-mono font-bold">{{ formatoMoneda(totalGeneralPresupuesto) }}</span></p>
+                <p class="text-[10px] text-neutral-400">FOLIO CONSULTADO: <span class="text-amber-400 font-mono font-bold">{{ formData.folio || 'N/A' }}</span> | PRESUPUESTO TOTAL MONTO: <span class="text-white font-mono font-bold">{{ formatoMoneda(totalGeneralPresupuesto) }}</span></p>
             </div>
             <div class="text-right">
                 <span class="text-[10px] text-neutral-400 block">SALDO RESTANTE EN TIEMPO REAL</span>
@@ -398,24 +439,100 @@
             </div>
         </div>
 
-        <div v-if="saldoConciliacion > 0 && totalComprobado > 0" class="bg-emerald-950/80 border border-emerald-800 p-4 rounded-xl text-center space-y-1">
-            <h4 class="text-xs font-bold text-emerald-400">💰 AVISO DE SALDO A FAVOR</h4>
+        <!-- ALERTA DE DISCREPANCIA SI LAS CANTIDADES NO CUADRAN -->
+        <div v-if="Math.abs(saldoConciliacion) > 0.01 && totalComprobado > 0" class="bg-red-950/90 border-2 border-red-600 p-4 rounded-xl text-center space-y-2 shadow-lg">
+            <h4 class="text-sm font-bold text-red-400 flex items-center justify-center gap-2">
+                <span class="text-lg">⚠️</span> Las cantidades no cuadran, favor de revisar
+            </h4>
             <p class="text-xs text-neutral-200">
-                HAy UN SALDO A FAVOR DE <span class="font-mono font-bold text-emerald-300">{{ formatoMoneda(saldoConciliacion) }}</span> EN EL PRESUPUESTO. 
-                CORRESPONDE A UN SALDO FAVORABLE DE LA EMPRESA O DEVOLUCIÓN DEL {{ formData.tipoPerfil === 'INTERNO' ? 'EMPLEADO' : 'PROVEEDOR EXTERNO' }}.
+                PRESUPUESTO ASIGNADO (BASE + EXTENSIÓN): <span class="font-mono font-bold text-white">{{ formatoMoneda(totalGeneralPresupuesto) }}</span> | 
+                TOTAL COMPROBADO: <span class="font-mono font-bold text-amber-400">{{ formatoMoneda(totalComprobado) }}</span> | 
+                DIFERENCIA: <span class="font-mono font-bold text-red-400">{{ formatoMoneda(saldoConciliacion) }}</span>
             </p>
+            <div class="text-[11px] text-red-300">
+                <span v-if="saldoConciliacion > 0">Falta por comprobar la cantidad de {{ formatoMoneda(saldoConciliacion) }} o registrar devolución.</span>
+                <span v-else>Existe un exceso de gasto no presupuestado por {{ formatoMoneda(Math.abs(saldoConciliacion)) }}.</span>
+            </div>
         </div>
 
-        <div v-if="saldoConciliacion < 0" class="bg-red-950/80 border border-red-800 p-4 rounded-xl text-center space-y-1">
-            <h4 class="text-xs font-bold text-red-400">⚠️ ALERTA DE CONCILIACIÓN - EXCESO DE GASTO</h4>
-            <p class="text-xs text-neutral-200">
-                FALTA LA CANTIDAD DE <span class="font-mono font-bold text-red-300">{{ formatoMoneda(Math.abs(saldoConciliacion)) }}</span> Y NO CUADRA CON EL PRESUPUESTO ORIGINAL.
-            </p>
-        </div>
-
-        <div v-if="saldoConciliacion === 0 && totalComprobado > 0" class="bg-blue-950/80 border border-blue-800 p-4 rounded-xl text-center space-y-1">
+        <div v-if="saldoConciliacion === 0 && totalComprobado > 0" class="bg-blue-950/80 border border-blue-800 p-4 rounded-xl text-center space-y-1 shadow">
             <h4 class="text-xs font-bold text-blue-400">✓ COMPROBACIÓN EXACTA</h4>
             <p class="text-xs text-neutral-200">EL PRESUPUESTO HA QUEDADO EN CEROS ($0.00) Y CUADRA PERFECTAMENTE CON EL MONTO ASIGNADO.</p>
+        </div>
+
+        <!-- REGISTROS PRESUPUESTADOS A COMPROBAR (BASE + EXTENSIÓN) -->
+        <div class="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
+            <div class="p-4 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center flex-wrap gap-2">
+                <div>
+                    <h3 class="font-bold text-neutral-200 text-xs flex items-center gap-2">
+                        <span>📋</span> REGISTROS PRESUPUESTADOS A COMPROBAR (BASE + EXTENSIÓN)
+                    </h3>
+                    <p class="text-[10px] text-neutral-400">PARTIDAS APROBADAS PARA ASEGURAR QUE EL PRESUPUESTO Y EL GASTO CUADREN PERFECTAMENTE</p>
+                </div>
+                <button v-if="puedeEscribir" @click="precargarPresupuestoAComprobacion" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow" title="Cargar todas las partidas presupuestadas a la tabla de comprobación para cotejo">
+                    <span>📥</span> PRECARGAR REGISTROS A COMPROBACIÓN
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-neutral-950 text-neutral-400 uppercase tracking-wider border-b border-neutral-800">
+                            <th class="p-2">TIPO</th>
+                            <th class="p-2">DEALER / PROV.</th>
+                            <th class="p-2">FECHA</th>
+                            <th class="p-2">CONCEPTO</th>
+                            <th class="p-2">DETALLE / RUTA / JUSTIFICACIÓN</th>
+                            <th class="p-2 text-right">MONTO ASIGNADO</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-800">
+                        <!-- Presupuesto Base -->
+                        <tr v-for="(item, bIdx) in presupuestoItems" :key="'base-comp-'+bIdx" class="hover:bg-neutral-800/40">
+                            <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[9px] bg-blue-950 text-blue-300 border border-blue-800 font-bold">BASE</span></td>
+                            <td class="p-2 font-bold text-white">{{ item.dealer }}</td>
+                            <td class="p-2 font-mono">{{ item.fecha }}</td>
+                            <td class="p-2 font-bold text-neutral-200">{{ item.concepto }}</td>
+                            <td class="p-2 text-neutral-300">{{ item.origen }} ➔ {{ item.destino }} ({{ item.proveedor || 'N/A' }})</td>
+                            <td class="p-2 font-mono font-bold text-right text-white">{{ formatoMoneda(item.monto) }}</td>
+                        </tr>
+                        <tr v-if="formData.montoAlimentos > 0" class="hover:bg-neutral-800/40">
+                            <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[9px] bg-blue-950 text-blue-300 border border-blue-800 font-bold">BASE</span></td>
+                            <td class="p-2 text-neutral-300">VIÁTICOS DIARIOS</td>
+                            <td class="p-2 font-mono">{{ formData.fechaPresupuesto }}</td>
+                            <td class="p-2 font-bold text-neutral-200">ALIMENTOS (FORÁNEO + EDOMEX)</td>
+                            <td class="p-2 text-neutral-300">{{ formData.diasForaneo }} DÍAS FORÁNEO / {{ formData.diasEdomex }} DÍAS EDOMEX</td>
+                            <td class="p-2 font-mono font-bold text-right text-white">{{ formatoMoneda(formData.montoAlimentos) }}</td>
+                        </tr>
+                        <tr v-if="formData.montoHospedaje > 0" class="hover:bg-neutral-800/40">
+                            <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[9px] bg-blue-950 text-blue-300 border border-blue-800 font-bold">BASE</span></td>
+                            <td class="p-2 text-neutral-300">HOTELES / HOSPEDAJE</td>
+                            <td class="p-2 font-mono">{{ formData.fechaPresupuesto }}</td>
+                            <td class="p-2 font-bold text-neutral-200">HOSPEDAJE</td>
+                            <td class="p-2 text-neutral-300">{{ formData.nochesHospedaje }} NOCHES</td>
+                            <td class="p-2 font-mono font-bold text-right text-white">{{ formatoMoneda(formData.montoHospedaje) }}</td>
+                        </tr>
+                        
+                        <!-- Extensión de Gastos -->
+                        <tr v-for="(ext, eIdx) in extensionItems" :key="'ext-comp-'+eIdx" class="bg-amber-950/20 hover:bg-amber-900/30">
+                            <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-950 text-amber-300 border border-amber-800 font-bold">EXTENSIÓN</span></td>
+                            <td class="p-2 font-bold text-amber-200">{{ ext.dealer }}</td>
+                            <td class="p-2 font-mono">{{ ext.fecha }}</td>
+                            <td class="p-2 font-bold text-amber-300">{{ ext.concepto }}</td>
+                            <td class="p-2 italic text-neutral-300"><span class="text-amber-500 font-bold not-italic">MOTIVO:</span> {{ ext.justificacion }}</td>
+                            <td class="p-2 font-mono font-bold text-right text-amber-400">{{ formatoMoneda(ext.monto) }}</td>
+                        </tr>
+                        <tr v-if="!presupuestoItems.length && !extensionItems.length && !formData.montoAlimentos && !formData.montoHospedaje">
+                            <td colspan="6" class="p-4 text-center text-neutral-500 italic">NO HAY REGISTROS PRESUPUESTADOS CARGADOS EN ESTE FOLIO.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-3 bg-neutral-950 border-t border-neutral-800 flex justify-between items-center text-xs">
+                <span class="text-neutral-400 font-bold">PRESUPUESTO TOTAL ASIGNADO (BASE + EXTENSIÓN):</span>
+                <span class="font-mono font-bold text-amber-400 text-sm">{{ formatoMoneda(totalGeneralPresupuesto) }}</span>
+            </div>
         </div>
 
         <div class="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
@@ -489,15 +606,24 @@
         <div class="bg-neutral-900 border border-neutral-800 p-4 rounded-xl flex justify-between items-center flex-wrap gap-3">
             <div class="text-xs text-neutral-300">
                 <span>ESTADO DE CONCILIACIÓN: </span>
-                <span :class="['font-bold', estadoConciliacionTexto === 'CONCILIADO EXACTO' ? 'text-emerald-400' : estadoConciliacionTexto === 'SALDO A FAVOR' ? 'text-blue-400' : 'text-red-400']">
-                    {{ estadoConciliacionTexto }}
+                <span :class="['font-bold', formData.estatusComprobacion === 'PAUSADA' ? 'text-amber-400' : estadoConciliacionTexto === 'CONCILIADO EXACTO' ? 'text-emerald-400' : 'text-red-400']">
+                    {{ formData.estatusComprobacion === 'PAUSADA' ? 'PAUSADA (CONGELADA)' : estadoConciliacionTexto }}
+                </span>
+                <span v-if="formData.pausadoPor" class="text-[10px] text-neutral-400 ml-2">
+                    (Por: {{ formData.pausadoPor }} - {{ formData.fechaPausa }})
                 </span>
             </div>
-            <div class="flex gap-3">
-                <button @click="aceptarConciliacion" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-2">
+            <div class="flex gap-2 flex-wrap">
+                <button v-if="formData.estatusComprobacion === 'PAUSADA'" @click="reanudarComprobacion" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-1.5">
+                    <span>▶️</span> REANUDAR COMPROBACIÓN
+                </button>
+                <button v-else @click="pausarComprobacion" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-amber-400 font-bold px-4 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-1.5" title="Congelar avance de auditoría para que otro auditor pueda retomarla posteriormente">
+                    <span>⏸️</span> PAUSAR COMPROBACIÓN
+                </button>
+                <button @click="aceptarConciliacion" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-1.5">
                     <span>✓</span> ACEPTAR CONCILIACIÓN
                 </button>
-                <button @click="cancelarConciliacion" class="bg-red-800 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-2">
+                <button @click="cancelarConciliacion" class="bg-red-800 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg text-xs transition flex items-center gap-1.5">
                     <span>✕</span> CANCELAR CONCILIACIÓN
                 </button>
             </div>
@@ -543,6 +669,11 @@
                         <option value="">-- SELECCIONAR CORREO --</option>
                         <option v-for="c in catalogos.correos" :key="c" :value="c">{{ c }}</option>
                     </select>
+                </div>
+                <div class="md:col-span-2 flex justify-end pt-1">
+                    <button @click="enviarAutorizacionExtension" :disabled="!extensionItems.length || extensionCancelada" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-2 shadow disabled:opacity-50 disabled:cursor-not-allowed" title="Enviar solicitud formal por correo a Supervisor y Gerente">
+                        <span>✉️</span> ENVIAR AUTORIZACIÓN A SUPERVISOR Y GERENTE
+                    </button>
                 </div>
             </div>
 
@@ -614,6 +745,22 @@
             <div class="p-4 bg-neutral-950 border-t border-neutral-800 flex justify-between items-center text-xs font-bold">
                 <span class="text-neutral-300">TOTAL PRESUPUESTADO EXTENSIÓN:</span>
                 <span class="font-mono text-amber-500 text-base">{{ formatoMoneda(totalExtension) }}</span>
+            </div>
+        </div>
+
+        <div class="bg-neutral-900 border border-neutral-800 p-4 rounded-xl flex justify-between items-center flex-wrap gap-3">
+            <div>
+                <span v-if="!puedeGuardarExtension" class="text-xs text-amber-400 font-semibold flex items-center gap-1.5">
+                    <span>⚠️</span> REQUIERE AUTORIZACIÓN DEL GERENTE/SUPERVISOR Y EVIDENCIA ADJUNTA (.MSG O IMAGEN) PARA HABILITAR EL GUARDADO.
+                </span>
+                <span v-else class="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+                    <span>✓</span> AUTORIZACIÓN Y EVIDENCIA VALIDADAS. LISTO PARA GUARDAR EXTENSIÓN.
+                </span>
+            </div>
+            <div class="flex gap-3">
+                <button :disabled="!puedeGuardarExtension" @click="guardarExtensionPresupuesto" :class="['font-bold px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 text-xs', puedeGuardarExtension ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer' : 'bg-neutral-800 text-neutral-500 border border-neutral-700 cursor-not-allowed opacity-60']" title="Guardar e incorporar la extensión en el presupuesto">
+                    <span>💾</span> GUARDAR EXTENSIÓN
+                </button>
             </div>
         </div>
     </main>
@@ -869,6 +1016,7 @@
                             <td class="p-2 font-mono text-right font-bold text-white">{{ formatoMonedaEspecifica(p.montoTotal, p.moneda) }}</td>
                             <td class="p-2 text-center">
                                 <span v-if="p.cancelado" class="bg-red-950 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-800">CANCELADO TODO</span>
+                                <span v-else-if="p.estatusComprobacion === 'PAUSADA'" class="bg-amber-950 text-amber-300 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-700">COMPR. PAUSADA</span>
                                 <span v-else-if="p.extensionCancelada || p.estatusExtension === 'RECHAZADA'" class="bg-amber-950 text-amber-400 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-800">EXT. RECHAZADA</span>
                                 <span v-else-if="p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">EXT. AUTORIZADA</span>
                                 <span v-else-if="p.autorizado || p.estatus === 'AUTORIZADO'" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">AUTORIZADO</span>
@@ -1083,8 +1231,13 @@ createApp({
                 autorizado: false,
                 estatus: 'PENDIENTE',
                 cancelado: false,
-                estatusExtension: 'PENDIENTE'
+                estatusExtension: 'PENDIENTE',
+                extensionGuardada: false,
+                estatusComprobacion: 'EN PROCESO',
+                pausadoPor: null,
+                fechaPausa: null
             },
+            extensionGuardada: false,
             extensionData: {
                 jefeEmail: 'jefe@sm-enterprise.com.mx',
                 gerenteEmail: 'gerente@sm-enterprise.com.mx',
@@ -1129,6 +1282,15 @@ createApp({
     computed: {
         esAdmin() { return this.usuarioActivo.permiso === 'FULL ACCESS'; },
         puedeEscribir() { return this.usuarioActivo.permiso === 'ESCRITURA' || this.usuarioActivo.permiso === 'FULL ACCESS'; },
+        puedeGuardarExtension() {
+            const autorizada = (this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO');
+            const tieneEvidencia = !!(this.extensionData.archivoAutorizacion || this.extensionData.archivoUrl);
+            const tieneItems = this.extensionItems.length > 0 && this.totalExtension > 0;
+            return autorizada && tieneEvidencia && tieneItems && !this.extensionCancelada;
+        },
+        hayDiferenciaConciliacion() {
+            return Math.abs(this.saldoConciliacion) > 0.01 && this.totalComprobado > 0;
+        },
         listaCatalogoActivo() {
             if (this.subTabAdmin === 'auditores') return this.catalogos.auditores;
             if (this.subTabAdmin === 'dealers') return this.catalogos.dealers;
@@ -1155,7 +1317,7 @@ createApp({
         },
         totalGeneralPresupuesto() {
             if (this.formData.cancelado) {
-                if ((this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada) {
+                if ((this.formData.extensionGuardada || this.extensionGuardada || this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada) {
                     return this.totalExtension;
                 }
                 return 0;
@@ -1164,7 +1326,7 @@ createApp({
             const hospedaje = Number(this.formData.montoHospedaje) || 0;
             const honorarios = Number(this.formData.honorarios) || 0;
             const retenciones = Number(this.formData.retenciones) || 0;
-            const ext = ((this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada) ? this.totalExtension : 0;
+            const ext = ((this.formData.extensionGuardada || this.extensionGuardada || this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada) ? this.totalExtension : 0;
             return this.subtotalTransporte + alimentos + hospedaje + honorarios - retenciones + ext;
         },
         totalComprobado() {
@@ -1411,6 +1573,59 @@ createApp({
             this.formData.estatusExtension = 'RECHAZADA';
             alert('EXTENSIÓN DE PRESUPUESTO RECHAZADA.');
         },
+        enviarAutorizacionExtension() {
+            if (!this.extensionItems.length) {
+                alert('AGREGUE AL MENOS UN CONCEPTO DE EXTENSIÓN ANTES DE ENVIAR.');
+                return;
+            }
+            const destinatarios = [
+                this.extensionData.jefeEmail,
+                this.extensionData.gerenteEmail
+            ].filter(Boolean).join(',');
+
+            const destinatariosFinal = destinatarios || this.catalogos.correos.slice(0, 2).join(',');
+            const auditor = this.formData.auditor || (this.usuarioActivo && this.usuarioActivo.nombre) || 'AUDITOR';
+            const nl = String.fromCharCode(10);
+            const asunto = 'SOLICITUD DE EXTENSION DE PRESUPUESTO - ' + this.formData.folio + ' - ' + auditor;
+
+            const lineas = this.extensionItems.map((r, i) => '  ' + (i + 1) + '. [' + (r.fecha || 'S/F') + '] ' + (r.concepto || 'EXTENSIÓN') + ' - DEALER: ' + (r.dealer || 'N/A') + ' | JUSTIFICACIÓN: ' + (r.justificacion || 'SIN DETALLE') + ' = ' + this.formatoMoneda(r.monto || 0));
+
+            const cuerpo = 'Estimado Supervisor y Gerente,' + nl + nl +
+                'Por medio del presente se solicita la autorización formal de la siguiente EXTENSIÓN DE PRESUPUESTO:' + nl + nl +
+                '==================================================' + nl +
+                'DETALLE DE LA EXTENSIÓN' + nl +
+                '==================================================' + nl +
+                '- FOLIO: ' + this.formData.folio + nl +
+                '- AUDITOR: ' + auditor + nl +
+                '- MONTO TOTAL EXTENSIÓN: ' + this.formatoMoneda(this.totalExtension) + nl +
+                '- PERIODO: MES ' + this.formData.mesTrabajo + ' (SEMANA ' + this.formData.numeroSemana + ')' + nl + nl +
+                'DESGLOSE DE PARTIDAS SOLICITADAS:' + nl +
+                lineas.join(nl) + nl + nl +
+                'Agradeciendo de antemano su oportuna validación y respuesta con la autorización correspondiente.' + nl + nl +
+                'Saludos cordiales,' + nl + auditor;
+
+            const mailtoUrl = 'mailto:' + destinatariosFinal + '?subject=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(cuerpo);
+            const mailLink = document.createElement('a');
+            mailLink.href = mailtoUrl;
+            mailLink.target = '_blank';
+            document.body.appendChild(mailLink);
+            mailLink.click();
+            document.body.removeChild(mailLink);
+            alert('SOLICITUD DE AUTORIZACIÓN DE EXTENSIÓN ENVIADA A SUPERVISOR Y GERENTE.');
+        },
+        guardarExtensionPresupuesto() {
+            if (!this.puedeGuardarExtension) {
+                alert('REQUIERE AUTORIZACIÓN DEL GERENTE/SUPERVISOR Y EVIDENCIA ADJUNTA (.MSG O IMAGEN) PARA PODER GUARDAR LA EXTENSIÓN.');
+                return;
+            }
+            this.formData.extensionGuardada = true;
+            this.extensionGuardada = true;
+            this.formData.extensionAutorizada = true;
+            this.extensionAutorizada = true;
+            this.formData.estatusExtension = 'AUTORIZADO';
+            this.guardarPresupuestoEnBD();
+            alert(`EXTENSIÓN DE PRESUPUESTO DEL FOLIO ${this.formData.folio} GUARDADA EXITOSAMENTE.\n\nEL MONTO DE ${this.formatoMoneda(this.totalExtension)} HA SIDO INCORPORADO AL DESGLOSE DETALLADO DE RUTAS Y AL TOTAL GENERAL.`);
+        },
         guardarUsuario() {
             if (!this.nuevoUsuario.nombre || !this.nuevoUsuario.password) {
                 alert('LLENE TODOS LOS CAMPOS DEL USUARIO.');
@@ -1595,6 +1810,10 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                 estatus: this.formData.estatus || (this.formData.autorizado ? 'AUTORIZADO' : 'PENDIENTE'),
                 extensionAutorizada: this.extensionAutorizada,
                 extensionCancelada: this.extensionCancelada,
+                extensionGuardada: this.formData.extensionGuardada || this.extensionGuardada || false,
+                estatusComprobacion: this.formData.estatusComprobacion || 'EN PROCESO',
+                pausadoPor: this.formData.pausadoPor || null,
+                fechaPausa: this.formData.fechaPausa || null,
                 presupuestoItems: JSON.parse(JSON.stringify(this.presupuestoItems)),
                 comprobacionItems: JSON.parse(JSON.stringify(this.comprobacionItems)),
                 extensionItems: JSON.parse(JSON.stringify(this.extensionItems)),
@@ -1640,13 +1859,18 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                 autorizado: false,
                 estatus: 'PENDIENTE',
                 cancelado: false,
-                estatusExtension: 'PENDIENTE'
+                estatusExtension: 'PENDIENTE',
+                extensionGuardada: false,
+                estatusComprobacion: 'EN PROCESO',
+                pausadoPor: null,
+                fechaPausa: null
             };
             this.presupuestoItems = [];
             this.comprobacionItems = [];
             this.extensionItems = [];
             this.extensionAutorizada = false;
             this.extensionCancelada = false;
+            this.extensionGuardada = false;
         },
         subirArchivo(event, item) {
             const file = event.target.files[0];
@@ -1756,6 +1980,10 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             this.formData = JSON.parse(JSON.stringify(p));
             this.extensionAutorizada = p.extensionAutorizada || false;
             this.extensionCancelada = p.extensionCancelada || false;
+            this.extensionGuardada = p.extensionGuardada || false;
+            this.formData.estatusComprobacion = p.estatusComprobacion || 'EN PROCESO';
+            this.formData.pausadoPor = p.pausadoPor || null;
+            this.formData.fechaPausa = p.fechaPausa || null;
             this.presupuestoItems = JSON.parse(JSON.stringify(p.presupuestoItems || []));
             this.comprobacionItems = JSON.parse(JSON.stringify(p.comprobacionItems || []));
             this.extensionItems = JSON.parse(JSON.stringify(p.extensionItems || []));
@@ -1773,7 +2001,82 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                 alert(`EL FOLIO ${this.folioBusqueda} NO SE ENCUENTRA REGISTRADO EN LA BASE DE DATOS.`);
             }
         },
+        precargarPresupuestoAComprobacion() {
+            if (this.comprobacionItems.length > 0) {
+                if (!confirm('Ya existen registros en la tabla de comprobación. ¿Desea precargar las partidas presupuestadas?')) {
+                    return;
+                }
+            }
+            this.presupuestoItems.forEach(item => {
+                this.comprobacionItems.push({
+                    dealer: item.dealer || (this.catalogos.dealers[0] || ''),
+                    fecha: item.fecha || '',
+                    concepto: item.concepto || 'AUTOBUS FORANEO',
+                    proveedorFactura: item.proveedor || '',
+                    numeroFactura: '',
+                    montoReal: Number(item.monto) || 0,
+                    archivoNombre: null
+                });
+            });
+            if (Number(this.formData.montoAlimentos) > 0) {
+                this.comprobacionItems.push({
+                    dealer: this.catalogos.dealers[0] || '',
+                    fecha: this.formData.fechaPresupuesto || '',
+                    concepto: 'ALIMENTOS FORÁNEOS',
+                    proveedorFactura: 'CONSUMOS DIVERSOS',
+                    numeroFactura: '',
+                    montoReal: Number(this.formData.montoAlimentos),
+                    archivoNombre: null
+                });
+            }
+            if (Number(this.formData.montoHospedaje) > 0) {
+                this.comprobacionItems.push({
+                    dealer: this.catalogos.dealers[0] || '',
+                    fecha: this.formData.fechaPresupuesto || '',
+                    concepto: 'HOSPEDAJE',
+                    proveedorFactura: 'HOTEL',
+                    numeroFactura: '',
+                    montoReal: Number(this.formData.montoHospedaje),
+                    archivoNombre: null
+                });
+            }
+            this.extensionItems.forEach(item => {
+                this.comprobacionItems.push({
+                    dealer: item.dealer || (this.catalogos.dealers[0] || ''),
+                    fecha: item.fecha || '',
+                    concepto: item.concepto || 'TRANSPORTE URBANO',
+                    proveedorFactura: '',
+                    numeroFactura: '',
+                    montoReal: Number(item.monto) || 0,
+                    archivoNombre: null
+                });
+            });
+            alert('PARTIDAS DEL PRESUPUESTO (BASE + EXTENSIÓN) CARGADAS A LA TABLA DE COMPROBACIÓN.');
+        },
+        pausarComprobacion() {
+            if (!this.formData.folio) {
+                alert('SELECCIONE O CARGUE UN FOLIO ANTES DE PAUSAR LA COMPROBACIÓN.');
+                return;
+            }
+            this.formData.estatusComprobacion = 'PAUSADA';
+            this.formData.pausadoPor = (this.usuarioActivo && this.usuarioActivo.nombre) ? this.usuarioActivo.nombre : 'AUDITOR';
+            this.formData.fechaPausa = new Date().toLocaleString('es-MX');
+            this.guardarPresupuestoEnBD();
+            alert(`COMPROBACIÓN DEL FOLIO ${this.formData.folio} PAUSADA Y CONGELADA.\n\nOTRO AUDITOR PODRÁ RETOMAR EL PROCESO POSTERIORMENTE.`);
+        },
+        reanudarComprobacion() {
+            this.formData.estatusComprobacion = 'EN PROCESO';
+            this.guardarPresupuestoEnBD();
+            alert(`COMPROBACIÓN DEL FOLIO ${this.formData.folio} REANUDADA.`);
+        },
         aceptarConciliacion() {
+            if (this.hayDiferenciaConciliacion) {
+                alert(`⚠️ Las cantidades no cuadran, favor de revisar.\n\nPresupuesto Asignado: ${this.formatoMoneda(this.totalGeneralPresupuesto)}\nTotal Comprobado: ${this.formatoMoneda(this.totalComprobado)}\nDiferencia: ${this.formatoMoneda(this.saldoConciliacion)}`);
+                if (!confirm('¿Desea cerrar la conciliación de todas formas con la diferencia detectada?')) {
+                    return;
+                }
+            }
+            this.formData.estatusComprobacion = 'CONCILIADO';
             this.guardarPresupuestoEnBD();
             alert(`CONCILIACIÓN DEL FOLIO ${this.formData.folio} ACEPTADA Y GUARDADA SATISFACTORIAMENTE.`);
         },
