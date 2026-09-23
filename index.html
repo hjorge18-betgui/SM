@@ -191,7 +191,7 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">FECHA DE PRESUPUESTO</label>
-                <input type="date" v-model="formData.fechaPresupuesto" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs disabled:opacity-50">
+                <input type="date" v-model="formData.fechaPresupuesto" @change="actualizarSemanaYMesPorFecha" @input="actualizarSemanaYMesPorFecha" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs disabled:opacity-50">
             </div>
             <div>
                 <label class="block text-xs font-semibold text-neutral-400 mb-1">MES DE TRABAJO</label>
@@ -852,7 +852,7 @@
                             <th class="p-2">MES / SEMANA</th>
                             <th class="p-2 text-right">EXTENSIÓN</th>
                             <th class="p-2 text-right">TOTAL GENERAL</th>
-                            <th class="p-2 text-center">ESTATUS EXT.</th>
+                            <th class="p-2 text-center">ESTATUS</th>
                             <th class="p-2 text-center">ACCIONES</th>
                         </tr>
                     </thead>
@@ -871,20 +871,31 @@
                                 <span v-if="p.cancelado" class="bg-red-950 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-800">CANCELADO TODO</span>
                                 <span v-else-if="p.extensionCancelada || p.estatusExtension === 'RECHAZADA'" class="bg-amber-950 text-amber-400 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-800">EXT. RECHAZADA</span>
                                 <span v-else-if="p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">EXT. AUTORIZADA</span>
+                                <span v-else-if="p.autorizado || p.estatus === 'AUTORIZADO'" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">AUTORIZADO</span>
                                 <span v-else class="bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded text-[10px] font-bold border border-neutral-700">PENDIENTE</span>
                             </td>
-                            <td class="p-2 text-center flex justify-center gap-2">
-                                <button @click="cargarPresupuestoParaVer(p)" class="bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold px-2 py-1 rounded text-[10px] border border-neutral-700 transition">
+                            <td class="p-2 text-center flex justify-center items-center gap-2">
+                                <button @click="cargarPresupuestoParaVer(p)" class="bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold px-2 py-1 rounded text-[10px] border border-neutral-700 transition" title="Ver y cargar presupuesto">
                                     👁️ VER / CARGAR
                                 </button>
+                                
+                                <button v-if="!p.autorizado && p.estatus !== 'AUTORIZADO' && !p.cancelado" @click="autorizarPresupuesto(p)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 font-bold px-2 py-1 rounded text-[10px] border border-emerald-700 transition flex items-center gap-1 shadow" title="Autorizar presupuesto">
+                                    ✅ AUTORIZAR
+                                </button>
+                                <span v-else-if="p.autorizado || p.estatus === 'AUTORIZADO'" class="bg-emerald-950/80 text-emerald-400 font-bold px-2 py-1 rounded text-[10px] border border-emerald-800 flex items-center gap-1">
+                                    ✓ AUTORIZADO
+                                </span>
                                 
                                 <div class="relative inline-block text-left" v-if="esAdmin">
                                     <button @click="toggleMenuCancelacion(p.folio)" class="bg-red-950/80 hover:bg-red-900 text-red-300 font-bold px-2 py-1 rounded text-[10px] border border-red-800 transition">
                                         ⚙️ GESTIONAR
                                     </button>
                                     
-                                    <div v-if="menuCancelacionAbierto === p.folio" class="origin-top-right absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-neutral-900 ring-1 ring-black ring-opacity-5 z-50 border border-neutral-700 divide-y divide-neutral-800">
+                                    <div v-if="menuCancelacionAbierto === p.folio" class="origin-top-right absolute right-0 mt-1 w-52 rounded-md shadow-lg bg-neutral-900 ring-1 ring-black ring-opacity-5 z-50 border border-neutral-700 divide-y divide-neutral-800">
                                         <div class="py-1">
+                                            <button v-if="!p.autorizado && p.estatus !== 'AUTORIZADO'" @click="autorizarPresupuesto(p)" class="block w-full text-left px-3 py-1.5 text-[10px] text-emerald-400 hover:bg-neutral-800 font-bold">
+                                                ✅ AUTORIZAR PRESUPUESTO
+                                            </button>
                                             <button @click="cancelarPresupuesto(p)" class="block w-full text-left px-3 py-1.5 text-[10px] text-amber-400 hover:bg-neutral-800 font-bold">
                                                 🚫 RECHAZAR PRESUPUESTO BASE
                                             </button>
@@ -910,6 +921,30 @@
 </div>
 
 <script>
+function calcularNumeroSemana(fechaStr) {
+    if (!fechaStr) return 1;
+    const partes = String(fechaStr).split('-');
+    if (partes.length !== 3) return 1;
+    const anio = parseInt(partes[0], 10);
+    const mes = parseInt(partes[1], 10) - 1;
+    const dia = parseInt(partes[2], 10);
+    const d = new Date(Date.UTC(anio, mes, dia));
+    if (isNaN(d.getTime())) return 1;
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function calcularMesDeFecha(fechaStr) {
+    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    if (!fechaStr) return 'ENERO';
+    const partes = String(fechaStr).split('-');
+    if (partes.length !== 3) return 'ENERO';
+    const mesIdx = parseInt(partes[1], 10) - 1;
+    return meses[mesIdx] || 'ENERO';
+}
+
 const { createApp } = Vue;
 
 const firebaseConfig = {
@@ -1016,6 +1051,8 @@ createApp({
                     extensionAutorizada: true,
                     extensionCancelada: false,
                     estatusExtension: 'AUTORIZADO',
+                    autorizado: true,
+                    estatus: 'AUTORIZADO',
                     cancelado: false,
                     presupuestoItems: [
                         { dealer: 'TRATON CAMIONES LA HUERTA', fecha: '2026-08-16', concepto: 'AUTOBUS FORANEO', origen: 'CENTRAL NORTE', horaSalida: '23:59', destino: 'ZAMORA', horaLlegada: '06:30', proveedor: 'PRIMERA PLUS', monto: 1345.00 },
@@ -1031,8 +1068,8 @@ createApp({
                 folio: 'PRES-2026-0034',
                 auditor: '',
                 fechaPresupuesto: new Date().toISOString().split('T')[0],
-                mesTrabajo: 'AGOSTO',
-                numeroSemana: 34,
+                mesTrabajo: calcularMesDeFecha(new Date().toISOString().split('T')[0]),
+                numeroSemana: calcularNumeroSemana(new Date().toISOString().split('T')[0]),
                 nochesHospedaje: 0,
                 diasForaneo: 0,
                 diasEdomex: 0,
@@ -1043,6 +1080,8 @@ createApp({
                 montoHospedaje: 0,
                 honorarios: 0,
                 retenciones: 0,
+                autorizado: false,
+                estatus: 'PENDIENTE',
                 cancelado: false,
                 estatusExtension: 'PENDIENTE'
             },
@@ -1058,6 +1097,12 @@ createApp({
         }
     },
     watch: {
+        'formData.fechaPresupuesto'(val) {
+            if (val) {
+                this.formData.numeroSemana = calcularNumeroSemana(val);
+                this.formData.mesTrabajo = calcularMesDeFecha(val);
+            }
+        },
         dbUsuarios: {
             deep: true,
             handler(val) {
@@ -1546,6 +1591,8 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             const registro = {
                 ...JSON.parse(JSON.stringify(this.formData)),
                 montoTotal: this.totalGeneralPresupuesto,
+                autorizado: this.formData.autorizado || false,
+                estatus: this.formData.estatus || (this.formData.autorizado ? 'AUTORIZADO' : 'PENDIENTE'),
                 extensionAutorizada: this.extensionAutorizada,
                 extensionCancelada: this.extensionCancelada,
                 presupuestoItems: JSON.parse(JSON.stringify(this.presupuestoItems)),
@@ -1560,16 +1607,26 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             }
             alert(`PRESUPUESTO ${this.formData.folio} GUARDADO EN LA BASE DE DATOS (NUBE FIREBASE).`);
         },
+        obtenerNumeroSemana(fechaStr) {
+            return calcularNumeroSemana(fechaStr);
+        },
+        actualizarSemanaYMesPorFecha() {
+            if (this.formData.fechaPresupuesto) {
+                this.formData.numeroSemana = calcularNumeroSemana(this.formData.fechaPresupuesto);
+                this.formData.mesTrabajo = calcularMesDeFecha(this.formData.fechaPresupuesto);
+            }
+        },
         nuevoPresupuesto() {
             const consecutivo = Math.floor(1000 + Math.random() * 9000);
+            const fechaHoy = new Date().toISOString().split('T')[0];
             this.formData = {
                 moneda: 'MXN',
                 tipoPerfil: 'INTERNO',
                 folio: `PRES-2026-${consecutivo}`,
                 auditor: this.usuarioActivo.nombre || '',
-                fechaPresupuesto: new Date().toISOString().split('T')[0],
-                mesTrabajo: 'AGOSTO',
-                numeroSemana: 34,
+                fechaPresupuesto: fechaHoy,
+                mesTrabajo: calcularMesDeFecha(fechaHoy),
+                numeroSemana: calcularNumeroSemana(fechaHoy),
                 nochesHospedaje: 0,
                 diasForaneo: 0,
                 diasEdomex: 0,
@@ -1580,6 +1637,8 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                 montoHospedaje: 0,
                 honorarios: 0,
                 retenciones: 0,
+                autorizado: false,
+                estatus: 'PENDIENTE',
                 cancelado: false,
                 estatusExtension: 'PENDIENTE'
             };
@@ -1727,13 +1786,48 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
         toggleMenuCancelacion(folio) {
             this.menuCancelacionAbierto = this.menuCancelacionAbierto === folio ? null : folio;
         },
+        autorizarPresupuesto(p) {
+            if (!p || !p.folio) return;
+            if (confirm(`¿DESEA AUTORIZAR EL PRESUPUESTO CON FOLIO ${p.folio}?`)) {
+                p.autorizado = true;
+                p.cancelado = false;
+                p.estatus = 'AUTORIZADO';
+                p.fechaAutorizacion = new Date().toISOString().split('T')[0];
+                p.autorizadoPor = (this.usuarioActivo && this.usuarioActivo.nombre) ? this.usuarioActivo.nombre : 'ADMINISTRADOR';
+                if (this.formData.folio === p.folio) {
+                    this.formData.autorizado = true;
+                    this.formData.cancelado = false;
+                    this.formData.estatus = 'AUTORIZADO';
+                    this.formData.fechaAutorizacion = p.fechaAutorizacion;
+                    this.formData.autorizadoPor = p.autorizadoPor;
+                }
+                if (p.folio) {
+                    this.guardarPresupuestoEnFirebase(p);
+                }
+                try {
+                    localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(this.repositorioBD));
+                } catch(e) {}
+                this.menuCancelacionAbierto = null;
+                alert(`EL PRESUPUESTO ${p.folio} HA SIDO AUTORIZADO SATISFACTORIAMENTE.`);
+            }
+        },
         cancelarPresupuesto(p) {
             if (confirm(`¿RECHAZAR PRESUPUESTO BASE FOLIO ${p.folio}?`)) {
                 p.cancelado = true;
+                p.autorizado = false;
+                p.estatus = 'CANCELADO';
                 this.menuCancelacionAbierto = null;
                 if (this.formData.folio === p.folio) {
                     this.formData.cancelado = true;
+                    this.formData.autorizado = false;
+                    this.formData.estatus = 'CANCELADO';
                 }
+                if (p.folio) {
+                    this.guardarPresupuestoEnFirebase(p);
+                }
+                try {
+                    localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(this.repositorioBD));
+                } catch(e) {}
                 alert(`EL PRESUPUESTO BASE CON FOLIO ${p.folio} HA SIDO CANCELADO.`);
             }
         },
@@ -1748,22 +1842,38 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                     this.extensionAutorizada = false;
                     this.formData.estatusExtension = 'RECHAZADA';
                 }
+                if (p.folio) {
+                    this.guardarPresupuestoEnFirebase(p);
+                }
+                try {
+                    localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(this.repositorioBD));
+                } catch(e) {}
                 alert(`LA EXTENSIÓN DEL FOLIO ${p.folio} HA SIDO RECHAZADA.`);
             }
         },
         cancelarTodo(p) {
             if (confirm(`¿RECHAZAR TODO EL REGISTRO CON FOLIO ${p.folio}?`)) {
                 p.cancelado = true;
+                p.autorizado = false;
+                p.estatus = 'CANCELADO';
                 p.extensionCancelada = true;
                 p.extensionAutorizada = false;
                 p.estatusExtension = 'RECHAZADA';
                 this.menuCancelacionAbierto = null;
                 if (this.formData.folio === p.folio) {
                     this.formData.cancelado = true;
+                    this.formData.autorizado = false;
+                    this.formData.estatus = 'CANCELADO';
                     this.extensionCancelada = true;
                     this.extensionAutorizada = false;
                     this.formData.estatusExtension = 'RECHAZADA';
                 }
+                if (p.folio) {
+                    this.guardarPresupuestoEnFirebase(p);
+                }
+                try {
+                    localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(this.repositorioBD));
+                } catch(e) {}
                 alert(`EL REGISTRO COMPLETO DEL FOLIO ${p.folio} HA SIDO RECHAZADO Y CANCELADO.`);
             }
         }
