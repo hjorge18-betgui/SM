@@ -324,9 +324,18 @@
                                         <div class="flex items-center gap-2">
                                             <span>⭐</span>
                                             <span>EXTENSIÓN DE PRESUPUESTO Y GASTOS ADICIONALES</span>
-                                            <span v-if="formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada" class="px-2 py-0.5 rounded text-[9px] bg-emerald-900 text-emerald-300 border border-emerald-700">AUTORIZADA</span>
-                                            <span v-else-if="formData.estatusExtension === 'RECHAZADA' || extensionCancelada" class="px-2 py-0.5 rounded text-[9px] bg-red-900 text-red-300 border border-red-700">RECHAZADA</span>
-                                            <span v-else class="px-2 py-0.5 rounded text-[9px] bg-amber-900 text-amber-300 border border-amber-700">PENDIENTE DE AUTORIZACIÓN</span>
+                                            <span v-if="formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada" class="px-2 py-0.5 rounded text-[9px] bg-emerald-900 text-emerald-300 border border-emerald-700 font-bold">✓ AUTORIZADA</span>
+                                            <span v-else-if="formData.estatusExtension === 'RECHAZADA' || extensionCancelada" class="px-2 py-0.5 rounded text-[9px] bg-red-900 text-red-300 border border-red-700 font-bold">✕ RECHAZADA</span>
+                                            <span v-else class="px-2 py-0.5 rounded text-[9px] bg-amber-900 text-amber-300 border border-amber-700 font-bold">⏳ PENDIENTE DE AUTORIZACIÓN</span>
+
+                                            <div v-if="puedeEscribir && !(formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada)" class="flex items-center gap-1 ml-1">
+                                                <button @click="autorizarExtensionDirecta" class="bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded transition shadow" title="Autorizar extensión por Supervisor/Gerente">
+                                                    ✓ AUTORIZAR
+                                                </button>
+                                                <button @click="rechazarExtensionDirecta" class="bg-red-800 hover:bg-red-700 text-white text-[10px] font-bold px-2 py-0.5 rounded transition shadow" title="Rechazar extensión">
+                                                    ✕ RECHAZAR
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <span class="text-xs text-amber-400 font-mono font-bold">SUBTOTAL EXTENSIÓN: {{ formatoMoneda(totalExtension) }}</span>
@@ -389,7 +398,10 @@
                 </div>
 
                 <div v-if="extensionItems.length > 0" class="flex justify-between text-amber-400 pt-1 border-t border-neutral-800 font-bold">
-                    <span>TOTAL PRESUPUESTADO EXTENSIÓN ({{ formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada ? 'AUTORIZADA' : (extensionCancelada || formData.estatusExtension === 'RECHAZADA' ? 'RECHAZADA' : 'REGISTRADA') }}):</span>
+                    <span>
+                        TOTAL PRESUPUESTADO EXTENSIÓN ({{ (formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada) ? 'AUTORIZADA' : (extensionCancelada || formData.estatusExtension === 'RECHAZADA' ? 'RECHAZADA' : 'PENDIENTE DE AUTORIZACIÓN') }}):
+                        <span v-if="!(formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada)" class="text-[10px] text-amber-500 font-normal ml-1">(NO SUMADO HASTA SER AUTORIZADO)</span>
+                    </span>
                     <span class="font-mono">{{ formatoMoneda(totalExtension) }}</span>
                 </div>
                 
@@ -405,7 +417,7 @@
                 </div>
 
                 <div class="flex justify-between text-sm font-bold text-white pt-2 border-t border-neutral-700">
-                    <span>TOTAL GENERAL (BASE + EXTENSIONES):</span>
+                    <span>{{ (formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada) ? 'TOTAL GENERAL (BASE + EXTENSIONES AUTORIZADAS):' : 'TOTAL GENERAL (PRESUPUESTO BASE):' }}</span>
                     <span class="font-mono text-amber-400 text-base">{{ formatoMoneda(totalGeneralPresupuesto) }}</span>
                 </div>
             </div>
@@ -1377,17 +1389,16 @@ createApp({
                    this.extensionItems.some(i => !i.monto || Number(i.monto) <= 0);
         },
         totalGeneralPresupuesto() {
+            const extensionEstaAutorizada = (this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada;
+            const ext = extensionEstaAutorizada ? this.totalExtension : 0;
+
             if (this.formData.cancelado) {
-                if (!this.extensionCancelada && this.formData.estatusExtension !== 'RECHAZADA') {
-                    return this.totalExtension;
-                }
-                return 0;
+                return ext;
             }
             const alimentos = Number(this.formData.montoAlimentos) || 0;
             const hospedaje = Number(this.formData.montoHospedaje) || 0;
             const honorarios = Number(this.formData.honorarios) || 0;
             const retenciones = Number(this.formData.retenciones) || 0;
-            const ext = (!this.extensionCancelada && this.formData.estatusExtension !== 'RECHAZADA') ? this.totalExtension : 0;
             return this.subtotalTransporte + alimentos + hospedaje + honorarios - retenciones + ext;
         },
         totalComprobado() {
@@ -2005,7 +2016,11 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
 
             let textoExtension = '';
             if (this.totalExtension > 0) {
-                textoExtension = '- EXTENSIÓN DE PRESUPUESTO' + (this.extensionAutorizada ? ' (AUTORIZADA)' : '') + ': ' + this.formatoMoneda(this.totalExtension) + nl;
+                if (this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') {
+                    textoExtension = '- EXTENSIÓN AUTORIZADA: ' + this.formatoMoneda(this.totalExtension) + ' (SUMADA AL TOTAL)' + nl;
+                } else {
+                    textoExtension = '- EXTENSIÓN SOLICITADA (PENDIENTE): ' + this.formatoMoneda(this.totalExtension) + ' (NO SUMADA HASTA SER AUTORIZADA)' + nl;
+                }
             }
 
             const cuerpo = 'Estimados Autorizadores,' + nl + nl +
@@ -2093,7 +2108,9 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                 const hospedaje = Number(p.montoHospedaje) || 0;
                 const honorarios = Number(p.honorarios) || 0;
                 const retenciones = Number(p.retenciones) || 0;
-                const totalPresupuestoCalculado = sumaTransporteConValor + alimentos + hospedaje + honorarios - retenciones + sumaExtensionConValor;
+                const extensionEstaAutorizada = (p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada) && !p.extensionCancelada;
+                const extSumada = extensionEstaAutorizada ? sumaExtensionConValor : 0;
+                const totalPresupuestoCalculado = sumaTransporteConValor + alimentos + hospedaje + honorarios - retenciones + extSumada;
                 const saldoDiferencia = totalPresupuestoCalculado - totalCompFolio;
 
                 // 1. Detalle de Comprobaciones (gasto por gasto)
@@ -2214,8 +2231,10 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                     "TRANSPORTE BASE (>0)": sumaTransporteConValor,
                     "ALIMENTOS": alimentos,
                     "HOSPEDAJE": hospedaje,
-                    "EXTENSIÓN (>0)": sumaExtensionConValor,
-                    "TOTAL PRESUPUESTO (SOLO >0)": totalPresupuestoCalculado,
+                    "EXTENSIÓN REGISTRADA (>0)": sumaExtensionConValor,
+                    "ESTATUS EXTENSIÓN": p.estatusExtension || (sumaExtensionConValor > 0 ? 'PENDIENTE' : 'N/A'),
+                    "EXTENSIÓN SUMADA AL PRESUPUESTO": extSumada,
+                    "TOTAL PRESUPUESTO (AUTORIZADO)": totalPresupuestoCalculado,
                     "TOTAL COMPROBADO": totalCompFolio,
                     "SALDO / DIFERENCIA": saldoDiferencia,
                     "ESTATUS COMPROBACIÓN": p.estatusComprobacion || (saldoDiferencia === 0 ? 'CONCILIADO EXACTO' : saldoDiferencia > 0 ? 'SALDO A FAVOR' : 'EXCESO NO COMPROBADO'),
