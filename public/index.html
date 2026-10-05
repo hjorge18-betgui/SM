@@ -245,11 +245,16 @@
         </div>
 
         <div class="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
-            <div class="p-4 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center">
+            <div class="p-4 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center flex-wrap gap-2">
                 <h3 class="font-bold text-neutral-200 text-xs">DESGLOSE DETALLADO DE RUTAS Y TRANSPORTES</h3>
-                <button v-if="puedeEscribir && !formData.cancelado" @click="agregarFilaPresupuesto" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
-                    + AGREGAR TRAMO / TRANSPORTE
-                </button>
+                <div class="flex items-center gap-2">
+                    <button v-if="puedeEscribir && !formData.cancelado" @click="agregarFilaPresupuesto" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                        + AGREGAR TRAMO / TRANSPORTE
+                    </button>
+                    <button v-if="puedeEscribir && !formData.cancelado" @click="agregarFilaExtension" class="bg-amber-800/80 hover:bg-amber-700 text-amber-200 hover:text-white border border-amber-600/60 text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1 shadow">
+                        <span>⭐</span> + AGREGAR EXTENSIÓN
+                    </button>
+                </div>
             </div>
             
             <div class="overflow-x-auto">
@@ -308,29 +313,58 @@
                             </td>
                         </tr>
 
-                        <!-- SEPARADOR Y REGISTROS DE EXTENSIÓN DE PRESUPUESTO AUTORIZADA -->
-                        <template v-if="(formData.extensionGuardada || extensionGuardada || extensionAutorizada || formData.estatusExtension === 'AUTORIZADO') && extensionItems.length > 0">
+                        <!-- SEPARADOR Y REGISTROS DE EXTENSIÓN DE PRESUPUESTO (LÍNEAS ADICIONALES) -->
+                        <template v-if="extensionItems.length > 0">
                             <tr class="bg-amber-950/70 border-t-2 border-b border-amber-600 text-amber-300 font-bold uppercase tracking-wider text-[11px]">
                                 <td colspan="11" class="p-2.5">
-                                    <div class="flex items-center justify-between">
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
                                         <div class="flex items-center gap-2">
                                             <span>⭐</span>
-                                            <span>EXTENSIÓN DE GASTOS Y TRANSPORTES ADICIONALES (AUTORIZADA Y GUARDADA)</span>
+                                            <span>EXTENSIÓN DE PRESUPUESTO Y GASTOS ADICIONALES</span>
+                                            <span v-if="formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada" class="px-2 py-0.5 rounded text-[9px] bg-emerald-900 text-emerald-300 border border-emerald-700">AUTORIZADA</span>
+                                            <span v-else-if="formData.estatusExtension === 'RECHAZADA' || extensionCancelada" class="px-2 py-0.5 rounded text-[9px] bg-red-900 text-red-300 border border-red-700">RECHAZADA</span>
+                                            <span v-else class="px-2 py-0.5 rounded text-[9px] bg-amber-900 text-amber-300 border border-amber-700">PENDIENTE DE AUTORIZACIÓN</span>
                                         </div>
-                                        <span class="text-xs text-amber-400 font-mono font-bold">SUBTOTAL EXTENSIÓN: {{ formatoMoneda(totalExtension) }}</span>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-amber-400 font-mono font-bold">SUBTOTAL EXTENSIÓN: {{ formatoMoneda(totalExtension) }}</span>
+                                            <button v-if="puedeEscribir && !formData.cancelado && !extensionCancelada" @click="agregarFilaExtension" class="bg-amber-600 hover:bg-amber-500 text-white text-[10px] px-2 py-1 rounded font-bold transition">
+                                                + OTRA EXTENSIÓN
+                                            </button>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
                             <tr v-for="(ext, eIdx) in extensionItems" :key="'ext-'+eIdx" class="bg-amber-950/20 hover:bg-amber-900/30 text-amber-100 border-b border-amber-900/40">
-                                <td class="p-2 font-bold text-center text-amber-400">EXT-{{ eIdx + 1 }}</td>
-                                <td class="p-2 font-bold text-white">{{ ext.dealer }}</td>
-                                <td class="p-2 font-mono">{{ ext.fecha }}</td>
-                                <td class="p-2 font-bold text-amber-300">{{ ext.concepto }}</td>
-                                <td colspan="5" class="p-2 italic text-neutral-300">
-                                    <span class="text-amber-500 font-bold not-italic text-[10px]">JUSTIFICACIÓN:</span> {{ ext.justificacion }}
+                                <td class="p-2 font-bold text-center text-amber-400">
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-950 text-amber-300 border border-amber-800 font-bold">EXT-{{ eIdx + 1 }}</span>
                                 </td>
-                                <td class="p-2 font-mono font-bold text-right text-amber-400">{{ formatoMoneda(ext.monto) }}</td>
-                                <td class="p-2 text-center text-[10px] text-emerald-400 font-bold">✓ AUTORIZADA</td>
+                                <td class="p-2">
+                                    <select v-model="ext.dealer" :disabled="!puedeEscribir || formData.cancelado || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-32 uppercase disabled:opacity-50">
+                                        <option v-for="d in catalogos.dealers" :key="d" :value="d">{{ d }}</option>
+                                    </select>
+                                </td>
+                                <td class="p-2">
+                                    <input type="date" v-model="ext.fecha" :disabled="!puedeEscribir || formData.cancelado || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-28 disabled:opacity-50">
+                                </td>
+                                <td class="p-2">
+                                    <select v-model="ext.concepto" :disabled="!puedeEscribir || formData.cancelado || extensionCancelada" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-32 disabled:opacity-50">
+                                        <option v-for="c in catalogos.todosConceptos" :key="c" :value="c">{{ c }}</option>
+                                    </select>
+                                </td>
+                                <td colspan="5" class="p-2">
+                                    <input type="text" spellcheck="true" lang="es" v-model="ext.justificacion" :disabled="!puedeEscribir || formData.cancelado || extensionCancelada" placeholder="JUSTIFICACIÓN / MOTIVO DE EXTENSIÓN" class="w-full bg-black border border-neutral-700 text-white rounded p-1 text-xs uppercase disabled:opacity-50">
+                                </td>
+                                <td class="p-2">
+                                    <input type="number" v-model.number="ext.monto" :disabled="!puedeEscribir || formData.cancelado || extensionCancelada" min="0" step="0.01" class="bg-black border border-neutral-700 text-white rounded p-1 text-xs w-20 font-mono disabled:opacity-50 text-right">
+                                </td>
+                                <td class="p-2 text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span v-if="formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada" class="text-[9px] text-emerald-400 font-bold px-1 py-0.5 bg-emerald-950/60 rounded border border-emerald-800">✓ AUTORIZADA</span>
+                                        <span v-else-if="formData.estatusExtension === 'RECHAZADA' || extensionCancelada" class="text-[9px] text-red-400 font-bold px-1 py-0.5 bg-red-950/60 rounded border border-red-800">✕ RECHAZADA</span>
+                                        <span v-else class="text-[9px] text-amber-400 font-bold px-1 py-0.5 bg-amber-950/60 rounded border border-amber-800">⏳ PENDIENTE</span>
+                                        <button v-if="puedeEscribir && !formData.cancelado && !extensionCancelada" @click="eliminarFilaExtension(eIdx)" class="text-red-500 hover:text-red-400 font-bold ml-1" title="Eliminar fila de extensión">✕</button>
+                                    </div>
+                                </td>
                             </tr>
                         </template>
                     </tbody>
@@ -351,8 +385,8 @@
                     <span class="font-mono font-bold text-white">{{ formatoMoneda(formData.cancelado ? 0 : formData.montoHospedaje || 0) }}</span>
                 </div>
 
-                <div v-if="(formData.extensionGuardada || extensionGuardada || extensionAutorizada || formData.estatusExtension === 'AUTORIZADO') && extensionItems.length > 0" class="flex justify-between text-amber-400 pt-1 border-t border-neutral-800 font-bold">
-                    <span>TOTAL PRESUPUESTADO EXTENSIÓN (AUTORIZADO Y GUARDADO):</span>
+                <div v-if="extensionItems.length > 0" class="flex justify-between text-amber-400 pt-1 border-t border-neutral-800 font-bold">
+                    <span>TOTAL PRESUPUESTADO EXTENSIÓN ({{ formData.estatusExtension === 'AUTORIZADO' || extensionAutorizada ? 'AUTORIZADA' : (extensionCancelada || formData.estatusExtension === 'RECHAZADA' ? 'RECHAZADA' : 'REGISTRADA') }}):</span>
                     <span class="font-mono">{{ formatoMoneda(totalExtension) }}</span>
                 </div>
                 
@@ -1011,14 +1045,15 @@
                             <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] bg-neutral-800 text-neutral-300 font-bold">{{ p.tipoPerfil }}</span></td>
                             <td class="p-2">{{ p.mesTrabajo }} (SEM {{ p.numeroSemana }})</td>
                             <td class="p-2 font-mono text-right font-bold text-amber-400">
-                                {{ (p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada) && !p.extensionCancelada ? formatoMonedaEspecifica(obtenerMontoExtension(p), p.moneda) : '$0.00 ' + p.moneda }}
+                                {{ obtenerMontoExtension(p) > 0 && !p.extensionCancelada && p.estatusExtension !== 'RECHAZADA' ? formatoMonedaEspecifica(obtenerMontoExtension(p), p.moneda) : '$0.00 ' + p.moneda }}
                             </td>
                             <td class="p-2 font-mono text-right font-bold text-white">{{ formatoMonedaEspecifica(p.montoTotal, p.moneda) }}</td>
                             <td class="p-2 text-center">
                                 <span v-if="p.cancelado" class="bg-red-950 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-800">CANCELADO TODO</span>
                                 <span v-else-if="p.estatusComprobacion === 'PAUSADA'" class="bg-amber-950 text-amber-300 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-700">COMPR. PAUSADA</span>
-                                <span v-else-if="p.extensionCancelada || p.estatusExtension === 'RECHAZADA'" class="bg-amber-950 text-amber-400 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-800">EXT. RECHAZADA</span>
-                                <span v-else-if="p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">EXT. AUTORIZADA</span>
+                                <span v-else-if="p.extensionCancelada || p.estatusExtension === 'RECHAZADA'" class="bg-red-950 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-800">EXT. RECHAZADA</span>
+                                <span v-else-if="obtenerMontoExtension(p) > 0 && (p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada)" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">EXT. AUTORIZADA</span>
+                                <span v-else-if="obtenerMontoExtension(p) > 0 && !p.autorizado && p.estatus !== 'AUTORIZADO'" class="bg-amber-950 text-amber-400 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-800">EXT. PENDIENTE</span>
                                 <span v-else-if="p.autorizado || p.estatus === 'AUTORIZADO'" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">AUTORIZADO</span>
                                 <span v-else class="bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded text-[10px] font-bold border border-neutral-700">PENDIENTE</span>
                             </td>
@@ -1317,7 +1352,7 @@ createApp({
         },
         totalGeneralPresupuesto() {
             if (this.formData.cancelado) {
-                if ((this.formData.extensionGuardada || this.extensionGuardada || this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada) {
+                if (!this.extensionCancelada && this.formData.estatusExtension !== 'RECHAZADA') {
                     return this.totalExtension;
                 }
                 return 0;
@@ -1326,7 +1361,7 @@ createApp({
             const hospedaje = Number(this.formData.montoHospedaje) || 0;
             const honorarios = Number(this.formData.honorarios) || 0;
             const retenciones = Number(this.formData.retenciones) || 0;
-            const ext = ((this.formData.extensionGuardada || this.extensionGuardada || this.extensionAutorizada || this.formData.estatusExtension === 'AUTORIZADO') && !this.extensionCancelada) ? this.totalExtension : 0;
+            const ext = (!this.extensionCancelada && this.formData.estatusExtension !== 'RECHAZADA') ? this.totalExtension : 0;
             return this.subtotalTransporte + alimentos + hospedaje + honorarios - retenciones + ext;
         },
         totalComprobado() {
@@ -1558,7 +1593,17 @@ createApp({
         },
         eliminarFilaComprobacion(index) { this.comprobacionItems.splice(index, 1); },
         agregarFilaExtension() {
-            this.extensionItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'TRANSPORTE URBANO', justificacion: '', monto: 0 });
+            this.extensionCancelada = false;
+            if (this.formData.estatusExtension === 'RECHAZADA') {
+                this.formData.estatusExtension = 'PENDIENTE';
+            }
+            this.extensionItems.push({
+                dealer: this.catalogos.dealers[0] || '',
+                fecha: this.formData.fechaPresupuesto || new Date().toISOString().split('T')[0],
+                concepto: 'TRANSPORTE URBANO',
+                justificacion: '',
+                monto: 0
+            });
         },
         eliminarFilaExtension(index) { this.extensionItems.splice(index, 1); },
         autorizarExtensionDirecta() {
@@ -1905,6 +1950,10 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                 const lineas = this.presupuestoItems.map((r, i) => '  ' + (i + 1) + '. [' + (r.fecha || 'S/F') + '] ' + (r.concepto || 'TRANSPORTE') + ': ' + (r.origen || 'ORIGEN') + ' -> ' + (r.destino || 'DESTINO') + ' (' + (r.proveedor || 'N/A') + ') = ' + this.formatoMoneda(r.monto || 0));
                 detalleRutas = nl + 'DESGLOSE DE RUTAS Y TRANSPORTES:' + nl + lineas.join(nl) + nl;
             }
+            if (this.extensionItems.length > 0) {
+                const lineasExt = this.extensionItems.map((r, i) => '  EXT-' + (i + 1) + '. [' + (r.fecha || 'S/F') + '] ' + (r.concepto || 'EXTENSIÓN') + ' - DEALER: ' + (r.dealer || 'N/A') + ' | ' + (r.justificacion || 'MOTIVO') + ' = ' + this.formatoMoneda(r.monto || 0));
+                detalleRutas += nl + 'DESGLOSE DE EXTENSIÓN DE PRESUPUESTO:' + nl + lineasExt.join(nl) + nl;
+            }
 
             let textoExterno = '';
             if (this.formData.tipoPerfil === 'EXTERNO') {
@@ -1912,8 +1961,8 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             }
 
             let textoExtension = '';
-            if (this.extensionAutorizada) {
-                textoExtension = '- EXTENSION AUTORIZADA: ' + this.formatoMoneda(this.totalExtension) + nl;
+            if (this.totalExtension > 0) {
+                textoExtension = '- EXTENSIÓN DE PRESUPUESTO' + (this.extensionAutorizada ? ' (AUTORIZADA)' : '') + ': ' + this.formatoMoneda(this.totalExtension) + nl;
             }
 
             const cuerpo = 'Estimados Autorizadores,' + nl + nl +
@@ -1969,8 +2018,9 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
                 "DÍAS CUOTAS ESP.": p.diasCuotasEspeciales,
                 "ALIMENTOS": p.montoAlimentos,
                 "HOSPEDAJE": p.montoHospedaje,
-                "TOTAL BASE": p.montoTotal,
-                "ESTATUS EXTENSIÓN": p.estatusExtension
+                "MONTO EXTENSIÓN": this.obtenerMontoExtension(p),
+                "TOTAL GENERAL": p.montoTotal,
+                "ESTATUS EXTENSIÓN": p.estatusExtension || (this.obtenerMontoExtension(p) > 0 ? 'PENDIENTE' : 'N/A')
             }));
             const wsGeneral = XLSX.utils.json_to_sheet(dataGeneral);
             XLSX.utils.book_append_sheet(wb, wsGeneral, "Presupuestos_General");
