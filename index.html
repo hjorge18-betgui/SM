@@ -254,6 +254,9 @@
                     <button v-if="puedeEscribir && !formData.cancelado" @click="agregarFilaExtension" class="bg-amber-800/80 hover:bg-amber-700 text-amber-200 hover:text-white border border-amber-600/60 text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1 shadow">
                         <span>⭐</span> + AGREGAR EXTENSIÓN
                     </button>
+                    <button v-if="puedeEscribir && !formData.cancelado && hayFilasEnCeroPresupuesto" @click="borrarFilasEnCeroPresupuesto" class="bg-red-950/90 hover:bg-red-900 text-red-300 hover:text-white border border-red-800 text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1 shadow" title="Eliminar filas de transporte y extensión con monto en $0 o vacías">
+                        <span>🗑️</span> BORRAR FILAS EN $0
+                    </button>
                 </div>
             </div>
             
@@ -993,11 +996,17 @@
                 <h3 class="font-bold text-neutral-200 text-xs flex items-center gap-2">
                     <span>📊</span> REPORTEADOR Y CONSULTA HISTÓRICA DE PRESUPUESTOS EN LA NUBE
                 </h3>
-                <div class="flex items-center gap-3">
-                    <button @click="descargarTodosLosReportesExcel" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-lg">
-                        <span>📥</span> DESCARGAR REPORTE GENERAL EXCEL (.XLSX)
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button @click="descargarTodosLosReportesExcel" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-lg" title="Descargar reporte general de presupuestos">
+                        <span>📊</span> REPORTE GENERAL (.XLSX)
                     </button>
-                    <span class="text-[10px] text-amber-500 font-mono font-bold">TOTAL REGISTROS: {{ presupuestosFiltrados.length }}</span>
+                    <button @click="descargarReporteDetalladoComprobaciones" class="bg-blue-700 hover:bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-lg" title="Descargar detalle completo de gastos comprobados y partidas presupuestadas">
+                        <span>📑</span> DETALLE COMPROBACIONES (.XLSX)
+                    </button>
+                    <button v-if="esAdmin || puedeEscribir" @click="borrarPresupuestosEnCero" class="bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800 text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow" title="Eliminar presupuestos que tengan monto general en $0">
+                        <span>🗑️</span> BORRAR FOLIOS EN $0
+                    </button>
+                    <span class="text-[10px] text-amber-500 font-mono font-bold ml-1">TOTAL REGISTROS: {{ presupuestosFiltrados.length }}</span>
                 </div>
             </div>
 
@@ -1057,7 +1066,7 @@
                                 <span v-else-if="p.autorizado || p.estatus === 'AUTORIZADO'" class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-800">AUTORIZADO</span>
                                 <span v-else class="bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded text-[10px] font-bold border border-neutral-700">PENDIENTE</span>
                             </td>
-                            <td class="p-2 text-center flex justify-center items-center gap-2">
+                            <td class="p-2 text-center flex justify-center items-center gap-1.5 flex-wrap">
                                 <button @click="cargarPresupuestoParaVer(p)" class="bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold px-2 py-1 rounded text-[10px] border border-neutral-700 transition" title="Ver y cargar presupuesto">
                                     👁️ VER / CARGAR
                                 </button>
@@ -1068,6 +1077,10 @@
                                 <span v-else-if="p.autorizado || p.estatus === 'AUTORIZADO'" class="bg-emerald-950/80 text-emerald-400 font-bold px-2 py-1 rounded text-[10px] border border-emerald-800 flex items-center gap-1">
                                     ✓ AUTORIZADO
                                 </span>
+                                
+                                <button v-if="puedeEscribir" @click="eliminarPresupuesto(p)" class="bg-red-950/80 hover:bg-red-900 text-red-300 font-bold px-2 py-1 rounded text-[10px] border border-red-800 transition flex items-center gap-1 shadow" title="Eliminar este presupuesto">
+                                    🗑️ BORRAR
+                                </button>
                                 
                                 <div class="relative inline-block text-left" v-if="esAdmin">
                                     <button @click="toggleMenuCancelacion(p.folio)" class="bg-red-950/80 hover:bg-red-900 text-red-300 font-bold px-2 py-1 rounded text-[10px] border border-red-800 transition">
@@ -1089,6 +1102,9 @@
                                         <div class="py-1">
                                             <button @click="cancelarTodo(p)" class="block w-full text-left px-3 py-1.5 text-[10px] text-red-500 hover:bg-neutral-800 font-bold">
                                                 ❌ RECHAZAR TODO EL REGISTRO
+                                            </button>
+                                            <button @click="eliminarPresupuesto(p)" class="block w-full text-left px-3 py-1.5 text-[10px] text-red-400 hover:bg-neutral-800 font-bold">
+                                                🗑️ ELIMINAR DE BASE DE DATOS
                                             </button>
                                         </div>
                                     </div>
@@ -1344,11 +1360,21 @@ createApp({
         },
         subtotalTransporte() {
             if (this.formData.cancelado) return 0;
-            return this.presupuestoItems.reduce((acc, item) => acc + (Number(item.monto) || 0), 0);
+            return this.presupuestoItems.reduce((acc, item) => {
+                const val = Number(item.monto) || 0;
+                return val > 0 ? acc + val : acc;
+            }, 0);
         },
         totalExtension() {
             if (this.extensionCancelada || this.formData.estatusExtension === 'RECHAZADA') return 0;
-            return this.extensionItems.reduce((acc, item) => acc + (Number(item.monto) || 0), 0);
+            return this.extensionItems.reduce((acc, item) => {
+                const val = Number(item.monto) || 0;
+                return val > 0 ? acc + val : acc;
+            }, 0);
+        },
+        hayFilasEnCeroPresupuesto() {
+            return this.presupuestoItems.some(i => !i.monto || Number(i.monto) <= 0) ||
+                   this.extensionItems.some(i => !i.monto || Number(i.monto) <= 0);
         },
         totalGeneralPresupuesto() {
             if (this.formData.cancelado) {
@@ -1582,7 +1608,10 @@ createApp({
         },
         obtenerMontoExtension(p) {
             if (!p.extensionItems) return 0;
-            return p.extensionItems.reduce((acc, i) => acc + (Number(i.monto) || 0), 0);
+            return p.extensionItems.reduce((acc, i) => {
+                const val = Number(i.monto) || 0;
+                return val > 0 ? acc + val : acc;
+            }, 0);
         },
         agregarFilaPresupuesto() {
             this.presupuestoItems.push({ dealer: this.catalogos.dealers[0] || '', fecha: '', concepto: 'AUTOBUS FORANEO', origen: '', horaSalida: '', destino: '', horaLlegada: '', proveedor: '', monto: 0 });
@@ -1606,6 +1635,20 @@ createApp({
             });
         },
         eliminarFilaExtension(index) { this.extensionItems.splice(index, 1); },
+        borrarFilasEnCeroPresupuesto() {
+            const cantAntesP = this.presupuestoItems.length;
+            const cantAntesE = this.extensionItems.length;
+            this.presupuestoItems = this.presupuestoItems.filter(item => Number(item.monto) > 0);
+            this.extensionItems = this.extensionItems.filter(item => Number(item.monto) > 0);
+            const eliminadosP = cantAntesP - this.presupuestoItems.length;
+            const eliminadosE = cantAntesE - this.extensionItems.length;
+            const totalEliminados = eliminadosP + eliminadosE;
+            if (totalEliminados === 0) {
+                alert('NO SE ENCONTRARON PARTIDAS CON MONTO EN $0 O VACÍAS.');
+            } else {
+                alert(`SE ELIMINARON ${totalEliminados} PARTIDA(S) CON MONTO EN $0 (${eliminadosP} de transporte y ${eliminadosE} de extensión).`);
+            }
+        },
         autorizarExtensionDirecta() {
             this.extensionAutorizada = true;
             this.extensionCancelada = false;
@@ -2025,6 +2068,216 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             const wsGeneral = XLSX.utils.json_to_sheet(dataGeneral);
             XLSX.utils.book_append_sheet(wb, wsGeneral, "Presupuestos_General");
             XLSX.writeFile(wb, "Reporte_General_Viaticos_2026.xlsx");
+        },
+        descargarReporteDetalladoComprobaciones() {
+            const wb = XLSX.utils.book_new();
+
+            const filasComprobaciones = [];
+            const filasPresupuestoConValor = [];
+            const filasResumenConciliacion = [];
+
+            this.presupuestosFiltrados.forEach(p => {
+                const moneda = p.moneda || 'MXN';
+                const totalCompFolio = (p.comprobacionItems || []).reduce((acc, c) => acc + (Number(c.montoReal) || 0), 0);
+                
+                // En el presupuesto SOLO sumar los que están con un valor (> 0), los que están en 0 no se toman en cuenta
+                const sumaTransporteConValor = (p.presupuestoItems || []).reduce((acc, i) => {
+                    const v = Number(i.monto) || 0;
+                    return v > 0 ? acc + v : acc;
+                }, 0);
+                const sumaExtensionConValor = (p.extensionItems || []).reduce((acc, i) => {
+                    const v = Number(i.monto) || 0;
+                    return v > 0 ? acc + v : acc;
+                }, 0);
+                const alimentos = Number(p.montoAlimentos) || 0;
+                const hospedaje = Number(p.montoHospedaje) || 0;
+                const honorarios = Number(p.honorarios) || 0;
+                const retenciones = Number(p.retenciones) || 0;
+                const totalPresupuestoCalculado = sumaTransporteConValor + alimentos + hospedaje + honorarios - retenciones + sumaExtensionConValor;
+                const saldoDiferencia = totalPresupuestoCalculado - totalCompFolio;
+
+                // 1. Detalle de Comprobaciones (gasto por gasto)
+                if (p.comprobacionItems && p.comprobacionItems.length > 0) {
+                    p.comprobacionItems.forEach((c, idx) => {
+                        filasComprobaciones.push({
+                            "FOLIO": p.folio,
+                            "FECHA PRESUPUESTO": p.fechaPresupuesto,
+                            "AUDITOR": p.auditor || 'N/A',
+                            "ITEM": idx + 1,
+                            "DEALER": c.dealer || 'N/A',
+                            "FECHA GASTO": c.fecha || 'S/F',
+                            "CONCEPTO": c.concepto || 'DIVERSO',
+                            "PROVEEDOR / FACTURA": c.proveedorFactura || '',
+                            "NO. FACTURA / NOTA": c.numeroFactura || '',
+                            "MONTO COMPROBADO": Number(c.montoReal) || 0,
+                            "MONEDA": moneda,
+                            "COMPROBANTE": c.archivoNombre ? `SÍ (${c.archivoNombre})` : 'PENDIENTE',
+                            "ESTATUS COMPROBACIÓN": p.estatusComprobacion || 'EN PROCESO'
+                        });
+                    });
+                } else {
+                    filasComprobaciones.push({
+                        "FOLIO": p.folio,
+                        "FECHA PRESUPUESTO": p.fechaPresupuesto,
+                        "AUDITOR": p.auditor || 'N/A',
+                        "ITEM": 0,
+                        "DEALER": 'SIN REGISTROS',
+                        "FECHA GASTO": '',
+                        "CONCEPTO": 'SIN GASTOS COMPROBADOS',
+                        "PROVEEDOR / FACTURA": '',
+                        "NO. FACTURA / NOTA": '',
+                        "MONTO COMPROBADO": 0,
+                        "MONEDA": moneda,
+                        "COMPROBANTE": 'N/A',
+                        "ESTATUS COMPROBACIÓN": p.estatusComprobacion || 'PENDIENTE'
+                    });
+                }
+
+                // 2. Detalle de Presupuesto: SOLO las partidas con valor > 0 (las de 0 no se toman en cuenta)
+                if (p.presupuestoItems && p.presupuestoItems.length > 0) {
+                    p.presupuestoItems.filter(i => Number(i.monto) > 0).forEach((item, idx) => {
+                        filasPresupuestoConValor.push({
+                            "FOLIO": p.folio,
+                            "FECHA PRESUPUESTO": p.fechaPresupuesto,
+                            "AUDITOR": p.auditor || 'N/A',
+                            "TIPO": "TRANSPORTE BASE",
+                            "NO. PARTIDA": idx + 1,
+                            "DEALER": item.dealer || 'N/A',
+                            "FECHA": item.fecha || '',
+                            "CONCEPTO": item.concepto || '',
+                            "RUTA / DETALLE": (item.origen || item.destino) ? `${item.origen || ''} -> ${item.destino || ''}` : '',
+                            "LÍNEA / PROVEEDOR": item.proveedor || '',
+                            "MONTO PRESUPUESTADO": Number(item.monto) || 0,
+                            "MONEDA": moneda
+                        });
+                    });
+                }
+                if (alimentos > 0) {
+                    filasPresupuestoConValor.push({
+                        "FOLIO": p.folio,
+                        "FECHA PRESUPUESTO": p.fechaPresupuesto,
+                        "AUDITOR": p.auditor || 'N/A',
+                        "TIPO": "ALIMENTOS",
+                        "NO. PARTIDA": "ALIM",
+                        "DEALER": "GENERAL",
+                        "FECHA": p.fechaPresupuesto,
+                        "CONCEPTO": "ALIMENTOS FORÁNEOS / EDOMEX",
+                        "RUTA / DETALLE": `${p.diasForaneo || 0} DÍAS FORÁNEO / ${p.diasEdomex || 0} DÍAS EDOMEX`,
+                        "LÍNEA / PROVEEDOR": "VIÁTICOS DIARIOS",
+                        "MONTO PRESUPUESTADO": alimentos,
+                        "MONEDA": moneda
+                    });
+                }
+                if (hospedaje > 0) {
+                    filasPresupuestoConValor.push({
+                        "FOLIO": p.folio,
+                        "FECHA PRESUPUESTO": p.fechaPresupuesto,
+                        "AUDITOR": p.auditor || 'N/A',
+                        "TIPO": "HOSPEDAJE",
+                        "NO. PARTIDA": "HOSP",
+                        "DEALER": "GENERAL",
+                        "FECHA": p.fechaPresupuesto,
+                        "CONCEPTO": "HOTELES / HOSPEDAJE",
+                        "RUTA / DETALLE": `${p.nochesHospedaje || 0} NOCHES`,
+                        "LÍNEA / PROVEEDOR": "HOSPEDAJE",
+                        "MONTO PRESUPUESTADO": hospedaje,
+                        "MONEDA": moneda
+                    });
+                }
+                if (p.extensionItems && p.extensionItems.length > 0) {
+                    p.extensionItems.filter(i => Number(i.monto) > 0).forEach((ext, idx) => {
+                        filasPresupuestoConValor.push({
+                            "FOLIO": p.folio,
+                            "FECHA PRESUPUESTO": p.fechaPresupuesto,
+                            "AUDITOR": p.auditor || 'N/A',
+                            "TIPO": "EXTENSIÓN",
+                            "NO. PARTIDA": `EXT-${idx + 1}`,
+                            "DEALER": ext.dealer || 'N/A',
+                            "FECHA": ext.fecha || '',
+                            "CONCEPTO": ext.concepto || 'TRANSPORTE URBANO',
+                            "RUTA / DETALLE": ext.justificacion || 'MOTIVO DE EXTENSIÓN',
+                            "LÍNEA / PROVEEDOR": "EXTENSIÓN ADICIONAL",
+                            "MONTO PRESUPUESTADO": Number(ext.monto) || 0,
+                            "MONEDA": moneda
+                        });
+                    });
+                }
+
+                // 3. Resumen de Conciliación
+                filasResumenConciliacion.push({
+                    "FOLIO": p.folio,
+                    "FECHA": p.fechaPresupuesto,
+                    "AUDITOR": p.auditor || 'N/A',
+                    "PERFIL": p.tipoPerfil,
+                    "MES": p.mesTrabajo,
+                    "SEMANA": p.numeroSemana,
+                    "TRANSPORTE BASE (>0)": sumaTransporteConValor,
+                    "ALIMENTOS": alimentos,
+                    "HOSPEDAJE": hospedaje,
+                    "EXTENSIÓN (>0)": sumaExtensionConValor,
+                    "TOTAL PRESUPUESTO (SOLO >0)": totalPresupuestoCalculado,
+                    "TOTAL COMPROBADO": totalCompFolio,
+                    "SALDO / DIFERENCIA": saldoDiferencia,
+                    "ESTATUS COMPROBACIÓN": p.estatusComprobacion || (saldoDiferencia === 0 ? 'CONCILIADO EXACTO' : saldoDiferencia > 0 ? 'SALDO A FAVOR' : 'EXCESO NO COMPROBADO'),
+                    "MONEDA": moneda
+                });
+            });
+
+            const wsComp = XLSX.utils.json_to_sheet(filasComprobaciones);
+            const wsPres = XLSX.utils.json_to_sheet(filasPresupuestoConValor);
+            const wsRes = XLSX.utils.json_to_sheet(filasResumenConciliacion);
+
+            XLSX.utils.book_append_sheet(wb, wsComp, "Detalle_Comprobaciones");
+            XLSX.utils.book_append_sheet(wb, wsPres, "Presupuesto_Solo_Valores");
+            XLSX.utils.book_append_sheet(wb, wsRes, "Resumen_Conciliacion");
+
+            XLSX.writeFile(wb, "Reporte_Detallado_Comprobaciones_y_Presupuesto_2026.xlsx");
+        },
+        eliminarPresupuestoDeFirebase(folio) {
+            if (!folio) return;
+            const url = `${firebaseConfig.baseUrl}/viaticos_presupuestos/${encodeURIComponent(folio)}?key=${firebaseConfig.apiKey}`;
+            fetch(url, { method: 'DELETE' }).then(() => {
+                console.log('Presupuesto eliminado de Firebase:', folio);
+            }).catch(err => {
+                console.error('Error al eliminar presupuesto en Firebase:', err);
+            });
+        },
+        eliminarPresupuesto(p) {
+            if (!p || !p.folio) return;
+            if (!confirm(`¿Está seguro de eliminar permanentemente el presupuesto con folio ${p.folio}?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+            const idx = this.repositorioBD.findIndex(item => item.folio === p.folio);
+            if (idx >= 0) {
+                this.repositorioBD.splice(idx, 1);
+            }
+            this.eliminarPresupuestoDeFirebase(p.folio);
+            try {
+                localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(this.repositorioBD));
+            } catch(e) {}
+            if (this.formData.folio === p.folio) {
+                this.nuevoFolio();
+            }
+            this.menuCancelacionAbierto = null;
+            alert(`PRESUPUESTO ${p.folio} ELIMINADO EXITOSAMENTE.`);
+        },
+        borrarPresupuestosEnCero() {
+            const ceros = this.repositorioBD.filter(p => !p.montoTotal || Number(p.montoTotal) <= 0);
+            if (ceros.length === 0) {
+                alert('NO SE ENCONTRARON PRESUPUESTOS CON MONTO EN $0.');
+                return;
+            }
+            if (!confirm(`Se encontraron ${ceros.length} presupuesto(s) con monto en $0.\n\n¿Desea eliminarlos permanentemente de la base de datos?`)) {
+                return;
+            }
+            ceros.forEach(p => {
+                this.eliminarPresupuestoDeFirebase(p.folio);
+            });
+            this.repositorioBD = this.repositorioBD.filter(p => Number(p.montoTotal) > 0);
+            try {
+                localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(this.repositorioBD));
+            } catch(e) {}
+            alert(`SE ELIMINARON ${ceros.length} PRESUPUESTO(S) EN $0.`);
         },
         cargarPresupuestoParaVer(p) {
             this.formData = JSON.parse(JSON.stringify(p));
