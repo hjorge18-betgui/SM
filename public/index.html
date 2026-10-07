@@ -211,7 +211,7 @@
         <div :class="['p-3 rounded-lg text-xs flex items-center gap-2 border', formData.tipoPerfil === 'INTERNO' ? 'bg-neutral-900 text-blue-400 border-blue-900' : 'bg-neutral-900 text-emerald-400 border-emerald-900']">
             <span class="font-bold">AVISO LEGAL:</span>
             <span v-if="formData.tipoPerfil === 'INTERNO'">MANEJO DE VIÁTICOS BAJO LA MODALIDAD DE ANTICIPO LABORAL SUJETO A COMPROBACIÓN FISCAL.</span>
-            <span v-if="formData.tipoPerfil === 'EXTERNO'">RELACIÓN MERCANTIL INDEPENDIENTE. SIN SUBORDINACIÓN LABORAL, NI ASIGNACIÓN DE HORARIOS. DOCUMENTO FISCAL EQUIVALENTE A COTIZACIÓN FORMAL.</span>
+            <span v-if="formData.tipoPerfil === 'EXTERNO'">RELACIÓN MERCANTIL INDEPENDIENTE. ESTA CAPTURA DE DATOS ES SOLO PARA GENERAR UN PRESUPUESTO DE SERVICIOS.</span>
         </div>
 
         <div v-if="formData.cancelado" class="bg-red-950/80 border border-red-800 p-3 rounded-xl text-center">
