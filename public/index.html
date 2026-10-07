@@ -172,10 +172,13 @@
             </div>
             <div class="flex items-center gap-2">
                 <label class="text-xs text-neutral-300">PERFIL LEGAL:</label>
-                <select v-model="formData.tipoPerfil" @change="actualizarDenominacion" class="bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg p-2 focus:ring-2 focus:ring-amber-500">
+                <select v-model="formData.tipoPerfil" @change="actualizarDenominacion" :disabled="esAuditorExterno || !puedeEscribir" :class="['border text-xs rounded-lg p-2 focus:ring-2 focus:ring-amber-500 font-bold', esAuditorExterno ? 'bg-neutral-900 border-amber-600/70 text-amber-400 cursor-not-allowed opacity-90' : 'bg-neutral-800 border-neutral-700 text-white']">
                     <option value="INTERNO">INTERNO (EMPLEADO S&M)</option>
                     <option value="EXTERNO">EXTERNO (CONTRATISTA / PROVEEDOR)</option>
                 </select>
+                <span v-if="esAuditorExterno" class="text-[10px] text-amber-400 font-bold bg-amber-950 border border-amber-800 px-2 py-1 rounded flex items-center gap-1 shadow" title="Perfil legal bloqueado: este auditor está catalogado como contratista o proveedor externo">
+                    🔒 BLOQUEADO
+                </span>
             </div>
         </div>
     </header>
@@ -223,10 +226,15 @@
 
         <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">NOMBRE DEL AUDITOR</label>
-                <select v-model="formData.auditor" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
+                <label class="block text-xs font-semibold text-neutral-400 mb-1 flex items-center justify-between">
+                    <span>NOMBRE DEL AUDITOR</span>
+                    <span v-if="formData.auditor" :class="esAuditorExterno ? 'text-amber-400' : 'text-blue-400'" class="text-[10px] font-bold">
+                        {{ esAuditorExterno ? '💼 EXTERNO (CONTRATISTA)' : '📋 INTERNO (S&M)' }}
+                    </span>
+                </label>
+                <select v-model="formData.auditor" @change="alCambiarAuditorPresupuesto" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-white rounded-lg p-2 text-xs focus:ring-2 focus:ring-amber-500 disabled:opacity-50 font-bold">
                     <option value="">-- SELECCIONAR --</option>
-                    <option v-for="aud in catalogos.auditores" :key="aud" :value="aud">{{ aud }}</option>
+                    <option v-for="aud in catalogos.auditores" :key="aud" :value="aud">{{ aud }} ({{ obtenerTipoAuditor(aud) }})</option>
                 </select>
             </div>
             <div>
@@ -1017,7 +1025,56 @@
                     </div>
                 </div>
 
-                <div v-if="['auditores', 'dealers', 'conceptos', 'correos'].includes(subTabAdmin)" class="space-y-4">
+                <!-- ADMINISTRACIÓN DE AUDITORES CON TIPO DE PERFIL LEGAL -->
+                <div v-if="subTabAdmin === 'auditores'" class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-xs text-amber-500">ADMINISTRACIÓN DE AUDITORES (CATÁLOGO Y PERFIL LEGAL)</h4>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-2 bg-black p-3 rounded-lg border border-neutral-800">
+                        <input type="text" spellcheck="true" lang="es" v-model="nuevoElementoCatalogo" placeholder="NOMBRE COMPLETO DEL AUDITOR..." class="flex-1 bg-neutral-900 border border-neutral-700 rounded p-1.5 text-xs text-white uppercase focus:ring-2 focus:ring-amber-500">
+                        <div class="flex items-center gap-1.5 bg-neutral-900 border border-neutral-700 px-2.5 py-1 rounded">
+                            <label class="text-[10px] text-neutral-400 font-semibold whitespace-nowrap">PERFIL LEGAL:</label>
+                            <select v-model="nuevoTipoAuditor" class="bg-black border border-neutral-700 rounded p-1 text-xs font-bold" :class="nuevoTipoAuditor === 'EXTERNO' ? 'text-amber-400' : 'text-blue-400'">
+                                <option value="INTERNO">INTERNO (EMPLEADO S&M)</option>
+                                <option value="EXTERNO">EXTERNO (CONTRATISTA / PROVEEDOR)</option>
+                            </select>
+                        </div>
+                        <button @click="guardarElementoCatalogo" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded transition whitespace-nowrap">
+                            + ALTA
+                        </button>
+                    </div>
+
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-neutral-950 text-neutral-400 border-b border-neutral-800">
+                                <th class="p-2 w-12 text-center">NO.</th>
+                                <th class="p-2">NOMBRE DEL AUDITOR</th>
+                                <th class="p-2">TIPO DE PERFIL LEGAL</th>
+                                <th class="p-2 w-24 text-center">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-neutral-800">
+                            <tr v-for="(val, idx) in catalogos.auditores" :key="idx" class="hover:bg-neutral-800/50">
+                                <td class="p-2 font-mono text-neutral-500 text-center">{{ idx + 1 }}</td>
+                                <td class="p-2 font-bold text-white">{{ val }}</td>
+                                <td class="p-2">
+                                    <button type="button" @click="alternarTipoAuditor(val)" :class="obtenerTipoAuditor(val) === 'EXTERNO' ? 'bg-amber-950/90 text-amber-400 border border-amber-700 hover:bg-amber-900' : 'bg-blue-950/90 text-blue-400 border border-blue-700 hover:bg-blue-900'" class="px-2.5 py-1 rounded text-[11px] font-bold transition flex items-center gap-1.5 shadow" :title="'Clic para cambiar a ' + (obtenerTipoAuditor(val) === 'EXTERNO' ? 'INTERNO' : 'EXTERNO')">
+                                        <span>{{ obtenerTipoAuditor(val) === 'EXTERNO' ? '💼' : '📋' }}</span>
+                                        <span>{{ obtenerTipoAuditor(val) === 'EXTERNO' ? 'EXTERNO (CONTRATISTA / PROVEEDOR)' : 'INTERNO (EMPLEADO S&M)' }}</span>
+                                        <span class="text-[9px] opacity-70 ml-1">✏️ CAMBIAR</span>
+                                    </button>
+                                </td>
+                                <td class="p-2 text-center">
+                                    <button @click="eliminarElementoCatalogo(idx)" class="text-red-500 font-bold hover:underline">BAJA</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ADMINISTRACIÓN DE OTROS CATÁLOGOS (DEALERS, CONCEPTOS, CORREOS) -->
+                <div v-else-if="['dealers', 'conceptos', 'correos'].includes(subTabAdmin)" class="space-y-4">
                     <div class="flex justify-between items-center">
                         <h4 class="font-bold text-xs text-amber-500">ADMINISTRACIÓN DE {{ subTabAdmin.toUpperCase() }}</h4>
                     </div>
@@ -1399,9 +1456,15 @@ createApp({
             extensionCancelada: false,
             menuCancelacionAbierto: null,
             nuevoElementoCatalogo: '',
+            nuevoTipoAuditor: 'INTERNO',
             folioBusqueda: '',
             catalogos: {
                 auditores: ['KEILA PALACIOS ANAYA', 'ALFREDO HERNANDEZ', 'MARCOS GARCIA'],
+                tiposAuditores: {
+                    'KEILA PALACIOS ANAYA': 'INTERNO',
+                    'ALFREDO HERNANDEZ': 'EXTERNO',
+                    'MARCOS GARCIA': 'INTERNO'
+                },
                 dealers: ['TRATON CAMIONES LA HUERTA', 'TRATON DACZA', 'INTERNATIONAL', 'DINAMUR', 'VOLVO BUSES', 'AYCO HUEHUETOCA'],
                 conceptosTransporte: ['AUTOBUS FORANEO', 'AVION', 'TRANSPORTE URBANO', 'COLECTIVO TAXI', 'COLECTIVO PESERA', 'TAXI / UBER / DIDI', 'CASETA PEAJE', 'GASOLINA'],
                 todosConceptos: ['AUTOBUS FORANEO', 'TRANSPORTE URBANO', 'TAXI / UBER / DIDI', 'CASETA PEAJE', 'GASOLINA', 'ALIMENTOS FORÁNEOS', 'ALIMENTOS EDO DE MÉXICO', 'HOSPEDAJE', 'OTROS'],
@@ -1539,9 +1602,22 @@ createApp({
             if (nuevoTab === 'comprobacion') {
                 this.asegurarCoincidenciaAuditorYFolioComprobacion();
             }
+        },
+        'formData.auditor'(val) {
+            this.aplicarPerfilAuditor(val);
+        },
+        'formData.tipoPerfil'(val) {
+            if (this.esAuditorExterno && val !== 'EXTERNO') {
+                this.formData.tipoPerfil = 'EXTERNO';
+                this.actualizarDenominacion();
+            }
         }
     },
     computed: {
+        esAuditorExterno() {
+            if (!this.formData.auditor) return false;
+            return this.obtenerTipoAuditor(this.formData.auditor) === 'EXTERNO';
+        },
         todosLosAuditoresDisponibles() {
             const lista = new Set(this.catalogos.auditores || []);
             (this.repositorioBD || []).forEach(p => {
@@ -1724,6 +1800,56 @@ createApp({
                 }
             } catch(e) {}
         },
+        obtenerTipoAuditor(nombre) {
+            if (!nombre) return 'INTERNO';
+            const norm = String(nombre).trim().toUpperCase();
+            if (!this.catalogos.tiposAuditores) {
+                this.catalogos.tiposAuditores = {};
+            }
+            if (this.catalogos.tiposAuditores[norm]) {
+                return this.catalogos.tiposAuditores[norm];
+            }
+            if (norm.includes('ALFREDO') || norm.includes('HERNANDEZ')) {
+                this.catalogos.tiposAuditores[norm] = 'EXTERNO';
+                return 'EXTERNO';
+            }
+            const pAud = (this.repositorioBD || []).find(p => (p.auditor || '').trim().toUpperCase() === norm && p.tipoPerfil);
+            if (pAud && pAud.tipoPerfil) {
+                this.catalogos.tiposAuditores[norm] = pAud.tipoPerfil;
+                return pAud.tipoPerfil;
+            }
+            return 'INTERNO';
+        },
+        alternarTipoAuditor(nombre) {
+            if (!nombre) return;
+            const norm = String(nombre).trim().toUpperCase();
+            if (!this.catalogos.tiposAuditores) {
+                this.catalogos.tiposAuditores = {};
+            }
+            const actual = this.obtenerTipoAuditor(norm);
+            const nuevo = actual === 'EXTERNO' ? 'INTERNO' : 'EXTERNO';
+            this.catalogos.tiposAuditores[norm] = nuevo;
+            try {
+                localStorage.setItem('viaticos_catalogos', JSON.stringify(this.catalogos));
+            } catch(e) {}
+            if ((this.formData.auditor || '').trim().toUpperCase() === norm) {
+                this.aplicarPerfilAuditor(norm);
+            }
+        },
+        aplicarPerfilAuditor(auditorNombre) {
+            if (!auditorNombre) return;
+            const tipo = this.obtenerTipoAuditor(auditorNombre);
+            if (tipo === 'EXTERNO') {
+                this.formData.tipoPerfil = 'EXTERNO';
+                this.actualizarDenominacion();
+            } else if (tipo === 'INTERNO') {
+                this.formData.tipoPerfil = 'INTERNO';
+                this.actualizarDenominacion();
+            }
+        },
+        alCambiarAuditorPresupuesto() {
+            this.aplicarPerfilAuditor(this.formData.auditor);
+        },
         actualizarDenominacion() {
             if (this.formData.tipoPerfil === 'EXTERNO') {
                 this.formData.diasForaneo = 0;
@@ -1751,6 +1877,7 @@ createApp({
                 this.requiereCambioPassword = false;
                 if (user.nombre && user.nombre !== 'ADMINISTRADOR GENERAL') {
                     this.formData.auditor = user.nombre;
+                    this.aplicarPerfilAuditor(user.nombre);
                 }
             } else {
                 this.loginError = 'CONTRASEÑA INCORRECTA PARA EL USUARIO.';
@@ -1993,15 +2120,36 @@ createApp({
         },
         guardarElementoCatalogo() {
             if (!this.nuevoElementoCatalogo) return;
-            const val = this.nuevoElementoCatalogo.toUpperCase();
-            if (this.subTabAdmin === 'auditores') this.catalogos.auditores.push(val);
+            const val = this.nuevoElementoCatalogo.trim().toUpperCase();
+            if (this.subTabAdmin === 'auditores') {
+                if (!this.catalogos.auditores.includes(val)) {
+                    this.catalogos.auditores.push(val);
+                }
+                if (!this.catalogos.tiposAuditores) {
+                    this.catalogos.tiposAuditores = {};
+                }
+                this.catalogos.tiposAuditores[val] = this.nuevoTipoAuditor || 'INTERNO';
+                try {
+                    localStorage.setItem('viaticos_catalogos', JSON.stringify(this.catalogos));
+                } catch(e) {}
+            }
             if (this.subTabAdmin === 'dealers') this.catalogos.dealers.push(val);
             if (this.subTabAdmin === 'conceptos') this.catalogos.todosConceptos.push(val);
             if (this.subTabAdmin === 'correos') this.catalogos.correos.push(val.toLowerCase());
             this.nuevoElementoCatalogo = '';
+            this.nuevoTipoAuditor = 'INTERNO';
         },
         eliminarElementoCatalogo(idx) {
-            if (this.subTabAdmin === 'auditores') this.catalogos.auditores.splice(idx, 1);
+            if (this.subTabAdmin === 'auditores') {
+                const audEliminado = this.catalogos.auditores[idx];
+                if (audEliminado && this.catalogos.tiposAuditores) {
+                    delete this.catalogos.tiposAuditores[audEliminado.trim().toUpperCase()];
+                    try {
+                        localStorage.setItem('viaticos_catalogos', JSON.stringify(this.catalogos));
+                    } catch(e) {}
+                }
+                this.catalogos.auditores.splice(idx, 1);
+            }
             if (this.subTabAdmin === 'dealers') this.catalogos.dealers.splice(idx, 1);
             if (this.subTabAdmin === 'conceptos') this.catalogos.todosConceptos.splice(idx, 1);
             if (this.subTabAdmin === 'correos') this.catalogos.correos.splice(idx, 1);
@@ -2856,6 +3004,9 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             this.comprobacionItems = JSON.parse(JSON.stringify(p.comprobacionItems || []));
             this.extensionItems = JSON.parse(JSON.stringify(p.extensionItems || []));
             this.extensionData = JSON.parse(JSON.stringify(p.extensionData || { jefeEmail: '', gerenteEmail: '', archivoAutorizacion: null, archivoUrl: null }));
+            if (p.auditor && this.obtenerTipoAuditor(p.auditor) === 'EXTERNO') {
+                this.formData.tipoPerfil = 'EXTERNO';
+            }
             if (tabDestino) {
                 this.activeTab = tabDestino;
             }
