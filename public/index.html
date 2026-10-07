@@ -1083,6 +1083,81 @@
                 </div>
             </div>
 
+            <!-- SECCIÓN EXCLUSIVA: GENERADOR DE REPORTES (PRESUPUESTO Y COMPROBACIÓN) -->
+            <div class="bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 p-4 sm:p-5 rounded-xl border border-neutral-700/80 shadow-2xl space-y-3">
+                <div class="flex items-center justify-between flex-wrap gap-2 border-b border-neutral-800 pb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">📑</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-amber-400 tracking-wider">
+                                MÓDULO EXCLUSIVO DE GENERACIÓN DE REPORTES
+                            </h4>
+                            <p class="text-[10px] text-neutral-400">
+                                FORMATOS OFICIALES PARA AUDITORÍA Y CONTROL FINANCIERO (CON BASE EN LOS FILTROS SELECCIONADOS)
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-[10px] font-mono text-neutral-300 bg-neutral-950 px-2.5 py-1 rounded border border-neutral-800 flex items-center gap-1.5">
+                        <span class="text-neutral-400">REGISTROS A PROCESAR:</span>
+                        <span class="text-amber-400 font-bold font-mono">{{ presupuestosFiltrados.length }}</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                    <!-- TARJETA 1: REPORTE DE PRESUPUESTO -->
+                    <div class="bg-black/80 border border-amber-500/30 hover:border-amber-500/60 transition p-3.5 rounded-lg flex flex-col justify-between space-y-2.5">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-xs text-amber-300 flex items-center gap-1.5">
+                                    <span>📊</span> REPORTE DE PRESUPUESTO
+                                </span>
+                                <span class="text-[9px] bg-amber-950 text-amber-400 border border-amber-800 px-1.5 py-0.5 rounded font-mono font-bold">11 COLUMNAS</span>
+                            </div>
+                            <p class="text-[10px] text-neutral-400 leading-relaxed">
+                                Detalle de partidas presupuestadas con desglose de rutas, transportes y viáticos con monto mayor a $0.
+                            </p>
+                            <div class="bg-neutral-950 p-1.5 rounded border border-neutral-800 text-[9px] font-mono text-neutral-300 overflow-x-auto whitespace-nowrap">
+                                Semana · Auditor · Dealer · Fecha · Concepto · Origen · Hora · Destino · Hora · Proveedor · Precio
+                            </div>
+                        </div>
+                        <div class="pt-1 flex items-center gap-2">
+                            <button @click="generarReportePresupuestoOficial" class="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2 px-3 rounded shadow transition flex items-center justify-center gap-1.5">
+                                <span>📥</span> DESCARGAR REPORTE DE PRESUPUESTO (.XLSX)
+                            </button>
+                            <button @click="verVistaPreviaReporte('presupuesto')" class="bg-neutral-800 hover:bg-neutral-700 text-amber-400 border border-neutral-700 text-xs py-2 px-2.5 rounded font-bold transition flex items-center gap-1" title="Ver vista previa en pantalla">
+                                <span>👁️</span> VER
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TARJETA 2: REPORTE DE COMPROBACIÓN -->
+                    <div class="bg-black/80 border border-blue-500/30 hover:border-blue-500/60 transition p-3.5 rounded-lg flex flex-col justify-between space-y-2.5">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-xs text-blue-300 flex items-center gap-1.5">
+                                    <span>📑</span> REPORTE DE COMPROBACIÓN
+                                </span>
+                                <span class="text-[9px] bg-blue-950 text-blue-400 border border-blue-800 px-1.5 py-0.5 rounded font-mono font-bold">24 COLUMNAS</span>
+                            </div>
+                            <p class="text-[10px] text-neutral-400 leading-relaxed">
+                                Control fiscal exhaustivo con desglose de notas, facturas, apps de taxi y saldos conciliados.
+                            </p>
+                            <div class="bg-neutral-950 p-1.5 rounded border border-neutral-800 text-[9px] font-mono text-neutral-300 overflow-x-auto whitespace-nowrap">
+                                MES · SEMANA · AUDITOR · DEALER · FECHA · CONCEPTO · ORIGEN · HORA · DESTINO · HORA · PROVEEDOR · NOTA · FACTURA · SUBTOTAL · IMPUESTOS · TOTAL · VALIDACION APP DE TAXI · VIATICOS · EXTENSIONES · TOTAL A COMPROBAR · TOTAL COMPROBADO · SALDO FINAL · C. COMPROBANTE FISCAL · S. COMPROBANTE FISCAL
+                            </div>
+                        </div>
+                        <div class="pt-1 flex items-center gap-2">
+                            <button @click="generarReporteComprobacionOficial" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs py-2 px-3 rounded shadow transition flex items-center justify-center gap-1.5">
+                                <span>📥</span> DESCARGAR REPORTE DE COMPROBACIÓN (.XLSX)
+                            </button>
+                            <button @click="verVistaPreviaReporte('comprobacion')" class="bg-neutral-800 hover:bg-neutral-700 text-blue-400 border border-neutral-700 text-xs py-2 px-2.5 rounded font-bold transition flex items-center gap-1" title="Ver vista previa en pantalla">
+                                <span>👁️</span> VER
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
@@ -1168,6 +1243,67 @@
             </div>
         </div>
     </main>
+
+    <!-- MODAL DE VISTA PREVIA DE REPORTES OFICIALES -->
+    <div v-if="modalReporte.visible" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-neutral-800 flex items-center justify-between flex-wrap gap-2 bg-neutral-950">
+                <div class="space-y-0.5">
+                    <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                        <span>{{ modalReporte.tipo === 'presupuesto' ? '📊' : '📑' }}</span> {{ modalReporte.titulo }}
+                    </h3>
+                    <p class="text-[10px] text-neutral-400">
+                        TOTAL DE FILAS A EXPORTAR: <span class="font-mono font-bold text-white">{{ modalReporte.filas.length }}</span> ({{ modalReporte.columnas.length }} COLUMNAS)
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button v-if="modalReporte.tipo === 'presupuesto'" @click="generarReportePresupuestoOficial" class="bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1">
+                        <span>📥</span> DESCARGAR .XLSX
+                    </button>
+                    <button v-else @click="generarReporteComprobacionOficial" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1">
+                        <span>📥</span> DESCARGAR .XLSX
+                    </button>
+                    <button @click="cerrarModalReporte" class="text-neutral-400 hover:text-white font-bold p-1 text-base">✕</button>
+                </div>
+            </div>
+
+            <div class="overflow-auto flex-1 p-3">
+                <table class="w-full text-left border-collapse text-[11px] whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-neutral-950 text-neutral-300 border-b border-neutral-800 uppercase sticky top-0">
+                            <th class="p-2 text-center text-neutral-500">#</th>
+                            <th v-for="(col, cIdx) in modalReporte.columnas" :key="cIdx" class="p-2 border-r border-neutral-800/60 font-semibold text-neutral-300">
+                                {{ col }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-800/60">
+                        <tr v-for="(fila, rIdx) in modalReporte.filas" :key="rIdx" class="hover:bg-neutral-800/40 font-mono">
+                            <td class="p-2 text-center text-neutral-500">{{ rIdx + 1 }}</td>
+                            <td v-for="(val, cIdx) in fila" :key="cIdx" class="p-2 border-r border-neutral-800/30">
+                                <span v-if="typeof val === 'number'" class="text-right block" :class="val > 0 ? (modalReporte.tipo === 'presupuesto' ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold') : 'text-neutral-500'">
+                                    {{ typeof val === 'number' && (modalReporte.columnas[cIdx].includes('TOTAL') || modalReporte.columnas[cIdx].includes('SUBTOTAL') || modalReporte.columnas[cIdx].includes('PRECIO') || modalReporte.columnas[cIdx].includes('FISCAL') || modalReporte.columnas[cIdx].includes('VIATICOS') || modalReporte.columnas[cIdx].includes('EXTENSIONES')) ? '$' + Number(val).toFixed(2) : val }}
+                                </span>
+                                <span v-else>{{ val }}</span>
+                            </td>
+                        </tr>
+                        <tr v-if="modalReporte.filas.length === 0">
+                            <td :colspan="modalReporte.columnas.length + 1" class="p-6 text-center text-neutral-500 italic">
+                                NO HAY DATOS PARA MOSTRAR CON LOS FILTROS ACTUALES
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-3 bg-neutral-950 border-t border-neutral-800 flex justify-between items-center text-xs">
+                <span class="text-neutral-400 text-[10px]">FORMATO OFICIAL CONFIGURADO SEGÚN PARÁMETROS DEL SAT Y CONTROL DE VIÁTICOS BET-GUI</span>
+                <button @click="cerrarModalReporte" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-4 py-1.5 rounded-lg text-xs font-bold transition">
+                    CERRAR
+                </button>
+            </div>
+        </div>
+    </div>
 
 </div>
 
@@ -1281,6 +1417,13 @@ createApp({
             firebaseDb: null,
             firebaseConectado: false,
             filtroReporte: { folio: '', auditor: '', mes: '' },
+            modalReporte: {
+                visible: false,
+                titulo: '',
+                tipo: '',
+                columnas: [],
+                filas: []
+            },
             repositorioBD: [
                 {
                     folio: 'PRES-2026-0033',
@@ -2300,6 +2443,317 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             XLSX.utils.book_append_sheet(wb, wsRes, "Resumen_Conciliacion");
 
             XLSX.writeFile(wb, "Reporte_Detallado_Comprobaciones_y_Presupuesto_2026.xlsx");
+        },
+        formatearFechaParaReporte(str) {
+            if (!str) return '';
+            if (typeof str === 'string' && str.includes('-')) {
+                const partes = str.split('T')[0].split('-');
+                if (partes.length === 3) {
+                    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+                }
+            }
+            return str;
+        },
+        formatearHoraParaReporte(horaStr) {
+            if (!horaStr) return '';
+            if (typeof horaStr === 'string' && horaStr.includes(':')) {
+                const partes = horaStr.split(':');
+                const numH = parseInt(partes[0], 10);
+                const m = partes[1].slice(0, 2);
+                if (!isNaN(numH)) {
+                    const ampm = numH >= 12 ? 'PM' : 'AM';
+                    const hora12 = numH % 12 || 12;
+                    return `${hora12}.${m} ${ampm}`;
+                }
+            }
+            return horaStr;
+        },
+        obtenerFilasReportePresupuesto() {
+            const filas = [];
+            this.presupuestosFiltrados.forEach(p => {
+                const sem = p.numeroSemana || (p.fechaPresupuesto ? calcularNumeroSemana(p.fechaPresupuesto) : '');
+                const aud = p.auditor || '';
+
+                // 1. Partidas de transporte con valor > 0
+                (p.presupuestoItems || []).filter(i => Number(i.monto) > 0).forEach(item => {
+                    filas.push([
+                        sem,
+                        aud,
+                        item.dealer || '',
+                        this.formatearFechaParaReporte(item.fecha || p.fechaPresupuesto),
+                        item.concepto || 'TRANSPORTE URBANO',
+                        item.origen || '',
+                        this.formatearHoraParaReporte(item.horaSalida),
+                        item.destino || '',
+                        this.formatearHoraParaReporte(item.horaLlegada),
+                        item.proveedor || '',
+                        Number(item.monto) || 0
+                    ]);
+                });
+
+                // 2. Partidas de extensión con valor > 0
+                (p.extensionItems || []).filter(e => Number(e.monto) > 0).forEach(ext => {
+                    filas.push([
+                        sem,
+                        aud,
+                        ext.dealer || '',
+                        this.formatearFechaParaReporte(ext.fecha || p.fechaPresupuesto),
+                        ext.concepto || 'TRANSPORTE URBANO',
+                        ext.justificacion || 'EXTENSIÓN DE PRESUPUESTO',
+                        '',
+                        '',
+                        '',
+                        'EXTENSIÓN',
+                        Number(ext.monto) || 0
+                    ]);
+                });
+
+                // 3. Alimentos con valor > 0
+                if (Number(p.montoAlimentos) > 0) {
+                    filas.push([
+                        sem,
+                        aud,
+                        'GENERAL',
+                        this.formatearFechaParaReporte(p.fechaPresupuesto),
+                        'ALIMENTOS FORÁNEOS / EDOMEX',
+                        `${p.diasForaneo || 0} DÍAS FORÁNEO / ${p.diasEdomex || 0} DÍAS EDOMEX`,
+                        '',
+                        '',
+                        '',
+                        'VIÁTICOS DIARIOS',
+                        Number(p.montoAlimentos) || 0
+                    ]);
+                }
+
+                // 4. Hospedaje con valor > 0
+                if (Number(p.montoHospedaje) > 0) {
+                    filas.push([
+                        sem,
+                        aud,
+                        'GENERAL',
+                        this.formatearFechaParaReporte(p.fechaPresupuesto),
+                        'HOSPEDAJE',
+                        `${p.nochesHospedaje || 0} NOCHES`,
+                        '',
+                        '',
+                        '',
+                        'HOTELES / HOSPEDAJE',
+                        Number(p.montoHospedaje) || 0
+                    ]);
+                }
+            });
+            return filas;
+        },
+        obtenerFilasReporteComprobacion() {
+            const filas = [];
+            this.presupuestosFiltrados.forEach(p => {
+                const totalCompFolio = (p.comprobacionItems || []).reduce((acc, c) => acc + (Number(c.montoReal) || 0), 0);
+                const sumaTransporteConValor = (p.presupuestoItems || []).reduce((acc, i) => {
+                    const v = Number(i.monto) || 0;
+                    return v > 0 ? acc + v : acc;
+                }, 0);
+                const sumaExtensionConValor = (p.extensionItems || []).reduce((acc, i) => {
+                    const v = Number(i.monto) || 0;
+                    return v > 0 ? acc + v : acc;
+                }, 0);
+                const alimentos = Number(p.montoAlimentos) || 0;
+                const hospedaje = Number(p.montoHospedaje) || 0;
+                const honorarios = Number(p.honorarios) || 0;
+                const retenciones = Number(p.retenciones) || 0;
+                const extensionEstaAutorizada = (p.estatusExtension === 'AUTORIZADO' || p.extensionAutorizada) && !p.extensionCancelada;
+                const extSumada = extensionEstaAutorizada ? sumaExtensionConValor : 0;
+                const totalAComprobar = sumaTransporteConValor + alimentos + hospedaje + honorarios - retenciones + extSumada;
+                const totalComprobado = totalCompFolio;
+                const saldoFinal = totalAComprobar - totalComprobado;
+
+                const compItems = p.comprobacionItems || [];
+                if (compItems.length === 0) {
+                    filas.push([
+                        p.mesTrabajo || '',
+                        p.numeroSemana || (p.fechaPresupuesto ? calcularNumeroSemana(p.fechaPresupuesto) : ''),
+                        p.auditor || '',
+                        'SIN REGISTROS',
+                        this.formatearFechaParaReporte(p.fechaPresupuesto),
+                        'SIN GASTOS COMPROBADOS',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        0,
+                        0,
+                        0,
+                        '',
+                        0,
+                        0,
+                        totalAComprobar,
+                        0,
+                        totalAComprobar,
+                        0,
+                        0
+                    ]);
+                } else {
+                    compItems.forEach((c, cIdx) => {
+                        const presupuestoItem = (p.presupuestoItems || [])[cIdx] || null;
+                        const monto = Number(c.montoReal) || 0;
+                        const numFac = (c.numeroFactura || '').trim();
+                        const tieneFiscal = Boolean(c.archivoNombre && (c.archivoNombre.toLowerCase().endsWith('.xml') || c.archivoNombre.toLowerCase().endsWith('.pdf')));
+
+                        let nota = '';
+                        let factura = '';
+                        if (numFac) {
+                            if (/nota|remision|ticket|recibo/i.test(numFac)) {
+                                nota = numFac;
+                            } else if (/fac|f-|a-|b-|uuid/i.test(numFac) || tieneFiscal) {
+                                factura = numFac;
+                            } else {
+                                nota = numFac;
+                            }
+                        } else if (tieneFiscal) {
+                            factura = 'CFDI ADJUNTO';
+                        }
+
+                        let subtotal = monto;
+                        let impuestos = 0;
+                        if (factura || tieneFiscal) {
+                            subtotal = Math.round((monto / 1.16) * 100) / 100;
+                            impuestos = Math.round((monto - subtotal) * 100) / 100;
+                        }
+
+                        const conceptoUpper = (c.concepto || '').toUpperCase();
+                        const provUpper = (c.proveedorFactura || '').toUpperCase();
+                        let validacionApp = '';
+                        if (conceptoUpper.includes('TAXI') || conceptoUpper.includes('UBER') || conceptoUpper.includes('DIDI') || conceptoUpper.includes('CABIFY') || provUpper.includes('UBER') || provUpper.includes('DIDI')) {
+                            validacionApp = c.archivoNombre ? 'VALIDADO APP' : 'COMPROBANTE APP';
+                        }
+
+                        let viaticos = 0;
+                        if (conceptoUpper.includes('ALIMENTO') || conceptoUpper.includes('HOSPEDAJE') || conceptoUpper.includes('VIATICO')) {
+                            viaticos = monto;
+                        }
+
+                        let extensiones = 0;
+                        if (c.esExtension || conceptoUpper.includes('EXTENSION') || (cIdx >= (p.presupuestoItems || []).length && (p.extensionItems || []).length > 0)) {
+                            extensiones = monto;
+                        }
+
+                        let cComprobanteFiscal = 0;
+                        let sComprobanteFiscal = 0;
+                        if (factura || tieneFiscal) {
+                            cComprobanteFiscal = monto;
+                        } else {
+                            sComprobanteFiscal = monto;
+                        }
+
+                        filas.push([
+                            p.mesTrabajo || '',
+                            p.numeroSemana || (p.fechaPresupuesto ? calcularNumeroSemana(p.fechaPresupuesto) : ''),
+                            p.auditor || '',
+                            c.dealer || presupuestoItem?.dealer || '',
+                            this.formatearFechaParaReporte(c.fecha || p.fechaPresupuesto),
+                            c.concepto || presupuestoItem?.concepto || '',
+                            c.origen || presupuestoItem?.origen || '',
+                            this.formatearHoraParaReporte(c.horaSalida || presupuestoItem?.horaSalida),
+                            c.destino || presupuestoItem?.destino || '',
+                            this.formatearHoraParaReporte(c.horaLlegada || presupuestoItem?.horaLlegada),
+                            c.proveedorFactura || c.proveedor || presupuestoItem?.proveedor || '',
+                            nota,
+                            factura,
+                            subtotal,
+                            impuestos,
+                            monto,
+                            validacionApp,
+                            viaticos,
+                            extensiones,
+                            totalAComprobar,
+                            totalComprobado,
+                            saldoFinal,
+                            cComprobanteFiscal,
+                            sComprobanteFiscal
+                        ]);
+                    });
+                }
+            });
+            return filas;
+        },
+        generarReportePresupuestoOficial() {
+            const encabezados = ['Semana', 'Auditor', 'Dealer', 'Fecha', 'Concepto', 'Origen', 'Hora', 'Destino', 'Hora', 'Proveedor', 'Precio'];
+            const filas = this.obtenerFilasReportePresupuesto();
+            if (filas.length === 0) {
+                alert('NO SE ENCONTRARON PARTIDAS CON VALOR MAYOR A $0 PARA GENERAR EL REPORTE DE PRESUPUESTO.');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet([ encabezados, ...filas ]);
+            ws['!cols'] = [
+                { wch: 10 },
+                { wch: 35 },
+                { wch: 45 },
+                { wch: 14 },
+                { wch: 25 },
+                { wch: 20 },
+                { wch: 14 },
+                { wch: 20 },
+                { wch: 14 },
+                { wch: 20 },
+                { wch: 14 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, "Reporte_Presupuesto");
+            const fechaStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Reporte_Presupuesto_${fechaStr}.xlsx`);
+        },
+        generarReporteComprobacionOficial() {
+            const encabezados = [
+                'MES', 'SEMANA', 'AUDITOR', 'DEALER', 'FECHA', 'CONCEPTO', 'ORIGEN', 'HORA',
+                'DESTINO', 'HORA', 'PROVEEDOR', 'NOTA', 'FACTURA', 'SUBTOTAL', 'IMPUESTOS', 'TOTAL',
+                'VALIDACION APP DE TAXI', 'VIATICOS', 'EXTENSIONES', 'TOTAL A COMPROBAR', 'TOTAL COMPROBADO',
+                'SALDO FINAL', 'C. COMPROBANTE FISCAL', 'S. COMPROBANTE FISCAL'
+            ];
+            const filas = this.obtenerFilasReporteComprobacion();
+            if (filas.length === 0) {
+                alert('NO SE ENCONTRARON REGISTROS DE COMPROBACIÓN PARA GENERAR EL REPORTE.');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet([ encabezados, ...filas ]);
+            ws['!cols'] = [
+                { wch: 14 }, { wch: 10 }, { wch: 32 }, { wch: 40 }, { wch: 14 }, { wch: 25 },
+                { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 22 }, { wch: 14 },
+                { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 24 }, { wch: 14 },
+                { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 24 }, { wch: 24 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, "Reporte_Comprobacion");
+            const fechaStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Reporte_Comprobacion_${fechaStr}.xlsx`);
+        },
+        verVistaPreviaReporte(tipo) {
+            if (tipo === 'presupuesto') {
+                this.modalReporte = {
+                    visible: true,
+                    titulo: 'VISTA PREVIA: REPORTE DE PRESUPUESTO',
+                    tipo: 'presupuesto',
+                    columnas: ['Semana', 'Auditor', 'Dealer', 'Fecha', 'Concepto', 'Origen', 'Hora', 'Destino', 'Hora', 'Proveedor', 'Precio'],
+                    filas: this.obtenerFilasReportePresupuesto()
+                };
+            } else {
+                this.modalReporte = {
+                    visible: true,
+                    titulo: 'VISTA PREVIA: REPORTE DE COMPROBACIÓN',
+                    tipo: 'comprobacion',
+                    columnas: [
+                        'MES', 'SEMANA', 'AUDITOR', 'DEALER', 'FECHA', 'CONCEPTO', 'ORIGEN', 'HORA',
+                        'DESTINO', 'HORA', 'PROVEEDOR', 'NOTA', 'FACTURA', 'SUBTOTAL', 'IMPUESTOS', 'TOTAL',
+                        'VALIDACION APP DE TAXI', 'VIATICOS', 'EXTENSIONES', 'TOTAL A COMPROBAR', 'TOTAL COMPROBADO',
+                        'SALDO FINAL', 'C. COMPROBANTE FISCAL', 'S. COMPROBANTE FISCAL'
+                    ],
+                    filas: this.obtenerFilasReporteComprobacion()
+                };
+            }
+        },
+        cerrarModalReporte() {
+            this.modalReporte.visible = false;
         },
         eliminarPresupuestoDeFirebase(folio) {
             if (!folio) return;
