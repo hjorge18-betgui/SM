@@ -495,21 +495,29 @@
 
         <div class="bg-neutral-900 p-4 sm:p-6 rounded-xl border border-neutral-800 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">NOMBRE DEL AUDITOR</label>
-                <select v-model="formData.auditor" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
+                <label class="block text-xs font-semibold text-neutral-400 mb-1 flex items-center justify-between">
+                    <span>NOMBRE DEL AUDITOR</span>
+                    <span v-if="formData.auditor" class="text-[10px] text-amber-500 font-mono font-bold">({{ foliosDisponiblesComprobacion.length }} PRESUPUESTOS EN BD)</span>
+                </label>
+                <select v-model="formData.auditor" @change="alCambiarAuditorComprobacion" :disabled="!puedeEscribir" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
                     <option value="">-- SELECCIONAR AUDITOR --</option>
-                    <option v-for="aud in catalogos.auditores" :key="aud" :value="aud">{{ aud }}</option>
+                    <option v-for="aud in todosLosAuditoresDisponibles" :key="aud" :value="aud">{{ aud }}</option>
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-neutral-400 mb-1">FOLIO AUTOGENERADO DE PRESUPUESTO</label>
+                <label class="block text-xs font-semibold text-neutral-400 mb-1 flex items-center justify-between">
+                    <span>FOLIO AUTOGENERADO DE PRESUPUESTO</span>
+                    <span v-if="formData.folio" class="text-[10px] text-emerald-400 font-mono font-bold">FOLIO ACTIVO: {{ formData.folio }}</span>
+                </label>
                 <div class="flex gap-2">
-                    <select v-model="folioBusqueda" @change="buscarYConciliarFolio" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold rounded-lg p-2.5 text-xs font-mono focus:ring-2 focus:ring-amber-500">
-                        <option value="">-- SELECCIONAR O BUSCAR FOLIO --</option>
-                        <option v-for="p in repositorioBD" :key="p.folio" :value="p.folio">{{ p.folio }} - {{ p.auditor }} ({{ formatoMonedaEspecifica(p.montoTotal, p.moneda) }})</option>
+                    <select v-model="folioBusqueda" @change="alCambiarFolioComprobacion" class="w-full bg-black border border-neutral-700 text-amber-400 font-bold rounded-lg p-2.5 text-xs font-mono focus:ring-2 focus:ring-amber-500">
+                        <option value="">{{ formData.auditor ? '-- SELECCIONAR FOLIO DE ' + formData.auditor + ' --' : '-- SELECCIONAR O BUSCAR FOLIO --' }}</option>
+                        <option v-for="p in foliosDisponiblesComprobacion" :key="p.folio" :value="p.folio">
+                            {{ p.folio }} - {{ p.auditor }} ({{ formatoMonedaEspecifica(p.montoTotal, p.moneda) }})
+                        </option>
                     </select>
-                    <button @click="buscarYConciliarFolio" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 rounded-lg text-xs transition">
-                        BUSCAR
+                    <button @click="alCambiarFolioComprobacion" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 rounded-lg text-xs transition flex items-center gap-1 shadow">
+                        <span>🔍</span> BUSCAR
                     </button>
                 </div>
             </div>
@@ -518,7 +526,7 @@
         <div class="bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center flex-wrap gap-2">
             <div>
                 <h3 class="font-bold text-neutral-200 text-xs">EJECUCIÓN PRESUPUESTAL Y COMPROBACIÓN REAL POR DÍA</h3>
-                <p class="text-[10px] text-neutral-400">FOLIO CONSULTADO: <span class="text-amber-400 font-mono font-bold">{{ formData.folio || 'N/A' }}</span> | PRESUPUESTO TOTAL MONTO: <span class="text-white font-mono font-bold">{{ formatoMoneda(totalGeneralPresupuesto) }}</span></p>
+                <p class="text-[10px] text-neutral-400">FOLIO CONSULTADO: <span class="text-amber-400 font-mono font-bold">{{ formData.folio || 'N/A' }}</span> | AUDITOR: <span class="text-amber-300 font-bold">{{ formData.auditor || 'SIN ASIGNAR' }}</span> | PRESUPUESTO TOTAL MONTO: <span class="text-white font-mono font-bold">{{ formatoMoneda(totalGeneralPresupuesto) }}</span></p>
             </div>
             <div class="text-right">
                 <span class="text-[10px] text-neutral-400 block">SALDO RESTANTE EN TIEMPO REAL</span>
@@ -1523,9 +1531,31 @@ createApp({
                     localStorage.setItem('viaticos_catalogos', JSON.stringify(val));
                 } catch(e) {}
             }
+        },
+        activeTab(nuevoTab) {
+            if (nuevoTab === 'comprobacion') {
+                this.asegurarCoincidenciaAuditorYFolioComprobacion();
+            }
         }
     },
     computed: {
+        todosLosAuditoresDisponibles() {
+            const lista = new Set(this.catalogos.auditores || []);
+            (this.repositorioBD || []).forEach(p => {
+                if (p.auditor) lista.add(p.auditor);
+            });
+            (this.dbUsuarios || []).forEach(u => {
+                if (u.nombre && u.nombre !== 'ADMINISTRADOR GENERAL') lista.add(u.nombre);
+            });
+            return Array.from(lista).sort();
+        },
+        foliosDisponiblesComprobacion() {
+            if (!this.formData.auditor) {
+                return this.repositorioBD;
+            }
+            const audNorm = (this.formData.auditor || '').trim().toUpperCase();
+            return this.repositorioBD.filter(p => (p.auditor || '').trim().toUpperCase() === audNorm);
+        },
         esAdmin() { return this.usuarioActivo.permiso === 'FULL ACCESS'; },
         puedeEscribir() { return this.usuarioActivo.permiso === 'ESCRITURA' || this.usuarioActivo.permiso === 'FULL ACCESS'; },
         puedeGuardarExtension() {
@@ -1716,7 +1746,7 @@ createApp({
                 this.usuarioActivo = { ...user };
                 this.sesionIniciada = true;
                 this.requiereCambioPassword = false;
-                if (this.catalogos.auditores.includes(user.nombre)) {
+                if (user.nombre && user.nombre !== 'ADMINISTRADOR GENERAL') {
                     this.formData.auditor = user.nombre;
                 }
             } else {
@@ -2070,6 +2100,9 @@ createApp({
                                 localStorage.setItem('viaticos_repositorio_bd', JSON.stringify(presupuestosNube));
                             } catch(e) {}
                             console.log('Presupuestos sincronizados desde Firebase:', presupuestosNube.length);
+                            if (this.activeTab === 'comprobacion') {
+                                this.asegurarCoincidenciaAuditorYFolioComprobacion();
+                            }
                         }
                     }
                 })
@@ -2801,8 +2834,9 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             } catch(e) {}
             alert(`SE ELIMINARON ${ceros.length} PRESUPUESTO(S) EN $0.`);
         },
-        cargarPresupuestoParaVer(p) {
+        cargarPresupuestoParaVer(p, tabDestino = 'presupuesto') {
             this.formData = JSON.parse(JSON.stringify(p));
+            this.folioBusqueda = p.folio;
             this.extensionAutorizada = p.extensionAutorizada || false;
             this.extensionCancelada = p.extensionCancelada || false;
             this.extensionGuardada = p.extensionGuardada || false;
@@ -2813,17 +2847,76 @@ COLECCIÓN NUBE: viaticos_usuarios (${(data.documents || []).length} usuarios ac
             this.comprobacionItems = JSON.parse(JSON.stringify(p.comprobacionItems || []));
             this.extensionItems = JSON.parse(JSON.stringify(p.extensionItems || []));
             this.extensionData = JSON.parse(JSON.stringify(p.extensionData || { jefeEmail: '', gerenteEmail: '', archivoAutorizacion: null, archivoUrl: null }));
-            this.activeTab = 'presupuesto';
+            if (tabDestino) {
+                this.activeTab = tabDestino;
+            }
         },
-        buscarYConciliarFolio() {
+        alCambiarAuditorComprobacion() {
+            if (!this.formData.auditor) {
+                this.folioBusqueda = '';
+                return;
+            }
+            const audNorm = (this.formData.auditor || '').trim().toUpperCase();
+            const foliosDelAuditor = this.repositorioBD.filter(p => (p.auditor || '').trim().toUpperCase() === audNorm);
+
+            if (foliosDelAuditor.length === 0) {
+                this.folioBusqueda = '';
+                // Limpiar partidas para que no queden gastos de otro auditor en pantalla
+                this.presupuestoItems = [];
+                this.extensionItems = [];
+                this.comprobacionItems = [];
+                this.formData.montoTotal = 0;
+                this.formData.montoAlimentos = 0;
+                this.formData.montoHospedaje = 0;
+                alert(`EL AUDITOR "${this.formData.auditor}" NO TIENE PRESUPUESTOS REGISTRADOS EN LA BASE DE DATOS.`);
+                return;
+            }
+
+            // Si el folio actual ya pertenece a este auditor, mantenerlo; de lo contrario cargar el más reciente
+            const folioActual = foliosDelAuditor.find(p => p.folio === this.folioBusqueda || p.folio === this.formData.folio);
+            const folioACargar = folioActual || foliosDelAuditor[foliosDelAuditor.length - 1];
+
+            this.cargarPresupuestoParaVer(folioACargar, 'comprobacion');
+            this.formData.auditor = folioACargar.auditor;
+            this.folioBusqueda = folioACargar.folio;
+        },
+        alCambiarFolioComprobacion() {
             if (!this.folioBusqueda) return;
             const presupuestoEncontrado = this.repositorioBD.find(p => p.folio === this.folioBusqueda);
             if (presupuestoEncontrado) {
-                this.cargarPresupuestoParaVer(presupuestoEncontrado);
-                this.activeTab = 'comprobacion';
-                alert(`FOLIO ${this.folioBusqueda} ENCONTRADO Y CARGADO PARA COMPROBACIÓN.`);
+                this.cargarPresupuestoParaVer(presupuestoEncontrado, 'comprobacion');
+                // Sincronización bidireccional estricta del auditor
+                this.formData.auditor = presupuestoEncontrado.auditor;
+                this.folioBusqueda = presupuestoEncontrado.folio;
             } else {
                 alert(`EL FOLIO ${this.folioBusqueda} NO SE ENCUENTRA REGISTRADO EN LA BASE DE DATOS.`);
+            }
+        },
+        buscarYConciliarFolio() {
+            this.alCambiarFolioComprobacion();
+        },
+        asegurarCoincidenciaAuditorYFolioComprobacion() {
+            const folioActual = this.folioBusqueda || this.formData.folio;
+            const presupuestoEncontrado = this.repositorioBD.find(p => p.folio === folioActual);
+
+            if (presupuestoEncontrado) {
+                // Si el auditor no coincide con el del presupuesto cargado, corregir de inmediato al auditor del folio
+                if ((this.formData.auditor || '').trim().toUpperCase() !== (presupuestoEncontrado.auditor || '').trim().toUpperCase()) {
+                    this.formData.auditor = presupuestoEncontrado.auditor;
+                }
+                this.folioBusqueda = presupuestoEncontrado.folio;
+            } else if (this.formData.auditor) {
+                // Si el folio no existe en BD pero hay auditor seleccionado, sincronizar con su folio
+                const audNorm = (this.formData.auditor || '').trim().toUpperCase();
+                const foliosDelAuditor = this.repositorioBD.filter(p => (p.auditor || '').trim().toUpperCase() === audNorm);
+                if (foliosDelAuditor.length > 0) {
+                    const masReciente = foliosDelAuditor[foliosDelAuditor.length - 1];
+                    this.cargarPresupuestoParaVer(masReciente, 'comprobacion');
+                    this.formData.auditor = masReciente.auditor;
+                    this.folioBusqueda = masReciente.folio;
+                } else {
+                    this.folioBusqueda = '';
+                }
             }
         },
         precargarPresupuestoAComprobacion() {
